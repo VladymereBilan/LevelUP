@@ -75,18 +75,45 @@ has a required `user_id`, which is what lets RLS scope rows to their owner.
 ## Running the RLS tests
 
 `src/__tests__/rls.test.ts` is a real integration test against a live Supabase — there's no way
-to verify Postgres's row-level security short of running Postgres. It **skips clearly** (with a
-console message, not a silent pass) when one isn't reachable, which is the case in this repo's
-current dev environment:
+to verify Postgres's row-level security short of running Postgres. It works against either a
+local instance (`supabase start`) or a hosted project; it doesn't care which.
+
+**It only skips when `SUPABASE_URL` isn't set at all.** Once a URL is configured, anything else
+wrong — the host unreachable, a rejected key, a missing opt-in for a non-local host — is a
+**test failure**, not a silent skip. A configured-but-broken setup is a real problem and should
+show up loudly, not get hidden behind "skipped". When it does skip, the message says exactly
+which env var(s) are missing or empty (never their values).
 
 ```bash
-npx supabase start                        # from packages/db
+# local (from packages/db, requires Docker):
+npx supabase start
 npx supabase db reset
 pnpm --filter @levelup/db test:rls
+
+# hosted project:
+# set SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY to the project's values
+RLS_TEST_ALLOW_REMOTE=true pnpm --filter @levelup/db test:rls
 ```
 
-It creates two throwaway auth users per test (cleaned up in `afterAll`), signs in as each via the
-anon key, and asserts things like: a user can't read another user's profile; no client can write
+`RLS_TEST_ALLOW_REMOTE=true` is required for any non-local host (anything but `localhost`/
+`127.0.0.1`/`::1`) — a deliberate safety guard, since this suite creates and deletes real
+throwaway auth users against whatever project `SUPABASE_URL` points at. The resolved host is
+logged before that guard is even checked, so you always know what you were about to hit.
+
+Before running anything, the suite validates the environment in this order:
+
+1. **Reachability** (network-level only): a request to the project's auth health endpoint.
+   _Any_ HTTP response — including a `401` — counts as reachable; only a thrown network error
+   (DNS failure, connection refused, TLS error, timeout) means it isn't.
+2. **Anon key**: a plain request to the PostgREST root endpoint. A non-2xx response fails the
+   suite with the HTTP status — e.g. a rejected key (wrong project, rotated JWT secret, bad copy
+   /paste) shows up as "anon key rejected: HTTP 401", not a vague "unreachable".
+3. **Service key**: a trivial admin call (`listUsers({ perPage: 1 })`). An error here fails the
+   suite as "service key invalid".
+
+Only past all three does it create test users. It creates two throwaway auth users per test
+(cleaned up in `afterAll`, including when a test fails), signs in as each via the anon key, and
+asserts things like: a user can't read another user's profile; no client can write
 `level`/`xp`/`rank`/`stats` or insert into `xp_events`; a user can update their own quest's
 `progress` but not flip its `status` to `completed`; `titles` is readable by any authenticated
 user but not writable; `user_challenges` can't be written by a client at all.

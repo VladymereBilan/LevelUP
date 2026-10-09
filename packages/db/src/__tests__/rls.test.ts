@@ -5,45 +5,57 @@ import type { Database } from "../database.types";
 /**
  * Proves the RLS policies in
  * packages/db/supabase/migrations/20260310000007_rls_policies.sql actually
- * block what they're meant to block, against a real local Supabase. There
- * is no way to verify this against anything less than a real Postgres +
- * PostgREST (RLS is enforced by Postgres itself, and the service_role vs.
- * authenticated distinction only exists through PostgREST's JWT handling) —
- * so this suite skips, clearly, when one isn't reachable instead of
- * pretending to pass.
+ * block what they're meant to block, against a real Supabase — local
+ * (`supabase start`) or a hosted project both work; there is no way to
+ * verify this against anything less than a real Postgres + PostgREST (RLS
+ * is enforced by Postgres itself, and the service_role vs. authenticated
+ * distinction only exists through PostgREST's JWT handling).
+ *
+ * This suite only SKIPS when SUPABASE_URL isn't set at all — a genuinely
+ * unconfigured environment. Once a URL is configured, a problem (host
+ * unreachable, a rejected key, a missing RLS_TEST_ALLOW_REMOTE opt-in for a
+ * non-local host) is a FAILURE, not a quiet skip: a configured-but-broken
+ * setup is worth surfacing loudly, not hiding behind "skipped".
  *
  * To actually run it:
- *   1. npx supabase start       (from packages/db — requires Docker)
- *   2. npx supabase db reset    (applies every migration fresh)
- *   3. pnpm --filter @levelup/db test:rls
+ *   Local:  npx supabase start (from packages/db — requires Docker), then
+ *           npx supabase db reset, then pnpm --filter @levelup/db test:rls
+ *   Hosted: set SUPABASE_URL/SUPABASE_ANON_KEY/SUPABASE_SERVICE_ROLE_KEY to
+ *           the project's values, set RLS_TEST_ALLOW_REMOTE=true, then
+ *           pnpm --filter @levelup/db test:rls
+ *
+ * This suite creates and deletes real throwaway auth users against
+ * whichever project SUPABASE_URL points at — never run it against a
+ * project you're not prepared for that on.
  */
 
-const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
+const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
-async function isSupabaseReachable(): Promise<boolean> {
-  if (!ANON_KEY || !SERVICE_ROLE_KEY) {
-    return false;
-  }
-  try {
-    const response = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
-      signal: AbortSignal.timeout(1500),
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
+function missingEnvVarNames(): string[] {
+  const missing: string[] = [];
+  if (!SUPABASE_URL) missing.push("SUPABASE_URL");
+  if (!ANON_KEY) missing.push("SUPABASE_ANON_KEY");
+  if (!SERVICE_ROLE_KEY) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  return missing;
 }
 
-const reachable = await isSupabaseReachable();
+// The only skip condition. Everything past this point either runs or fails
+// — see the file-level comment above for why.
+const skip = !SUPABASE_URL;
 
-if (!reachable) {
+if (skip) {
   console.warn(
-    `[rls.test.ts] Skipping: no local Supabase reachable at ${SUPABASE_URL}. ` +
-      "Run `npx supabase start` + `npx supabase db reset` from packages/db, then " +
-      "re-run `pnpm --filter @levelup/db test:rls`. See packages/db/README.md.",
+    `[rls.test.ts] Skipping: no SUPABASE_URL configured. ` +
+      `Missing/empty env var(s): ${missingEnvVarNames().join(", ")}. Values are never logged. ` +
+      "Point these at a local (`npx supabase start`) or hosted Supabase project, then re-run " +
+      "`pnpm --filter @levelup/db test:rls`. See packages/db/README.md.",
   );
+}
+
+function isLocalHost(hostname: string): boolean {
+  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
 }
 
 interface TestUser {
@@ -83,18 +95,63 @@ async function createSignedInTestUser(
   return { user: created.user, client };
 }
 
-describe.skipIf(!reachable)("RLS policies (requires local Supabase)", () => {
+describe.skipIf(skip)("RLS policies", () => {
   // Created in beforeAll, not at describe-body scope: describe.skipIf still
   // runs this factory function to collect the test tree even when the
   // whole suite is skipped, so anything that touches SERVICE_ROLE_KEY (empty
-  // when not reachable) must be deferred into a hook, not evaluated here.
+  // when skipped) must be deferred into a hook, not evaluated here.
   let admin: SupabaseClient<Database>;
   const createdUserIds: string[] = [];
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    const host = new URL(SUPABASE_URL).host;
+    const hostname = new URL(SUPABASE_URL).hostname;
+    // Printed before anything else — including before the remote-host
+    // guard below — so it's visible no matter how this beforeAll ends.
+    console.log(`[rls.test.ts] Supabase host: ${host}`);
+
+    if (!isLocalHost(hostname) && process.env.RLS_TEST_ALLOW_REMOTE !== "true") {
+      throw new Error(
+        `Refusing to run RLS tests against non-local host "${host}" without ` +
+          "RLS_TEST_ALLOW_REMOTE=true. This suite creates and deletes real auth users. " +
+          "Set RLS_TEST_ALLOW_REMOTE=true only if you intend to run it against this project.",
+      );
+    }
+
+    // Reachability: network-level only. ANY HTTP response — including a
+    // 401 (e.g. a missing/rejected apikey header) — means the host is
+    // reachable; only a thrown network error (DNS failure, connection
+    // refused, TLS error, timeout) means it isn't.
+    let healthResponse: Response;
+    try {
+      healthResponse = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
+        headers: { apikey: ANON_KEY },
+        signal: AbortSignal.timeout(5000),
+      });
+    } catch (networkError) {
+      const reason = networkError instanceof Error ? networkError.message : String(networkError);
+      throw new Error(`Supabase at "${host}" is unreachable (network error): ${reason}`);
+    }
+    console.log(`[rls.test.ts] Reachability probe: HTTP ${healthResponse.status} from ${host}`);
+
+    // Key validation: a configured-but-wrong key is a FAILURE, not a skip.
+    const anonCheck = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!anonCheck.ok) {
+      throw new Error(
+        `Supabase anon key rejected at "${host}": HTTP ${anonCheck.status} ${anonCheck.statusText}`,
+      );
+    }
+
     admin = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+    const { error: serviceCheckError } = await admin.auth.admin.listUsers({ perPage: 1 });
+    if (serviceCheckError) {
+      throw new Error(`Supabase service key invalid at "${host}": ${serviceCheckError.message}`);
+    }
   });
 
   afterAll(async () => {

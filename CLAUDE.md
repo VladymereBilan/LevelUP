@@ -121,7 +121,7 @@ Run from the repo root (Turborepo fans these out to every package; cached where 
 pnpm dev          # start mobile (Expo) and web (Next.js) dev servers
 pnpm build        # production build (web only has a real build in Phase 0)
 pnpm test         # run all test suites (packages/engine + packages/db; db's RLS suite
-                  #   skips clearly if no local Supabase is reachable — see its README)
+                  #   skips clearly if SUPABASE_URL isn't set — see its README)
 pnpm lint         # eslint across every package
 pnpm typecheck    # tsc --noEmit across every package (web runs `next typegen` first)
 pnpm format       # prettier --write .
