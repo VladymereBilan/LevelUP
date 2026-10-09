@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyStatGain, createEmptyStats, totalStatPoints } from "../stats";
+import { applyStatGain, calcStatGain, createEmptyStats, totalStatPoints } from "../stats";
 
 describe("createEmptyStats", () => {
   it("starts every stat at 0", () => {
@@ -37,5 +37,15 @@ describe("totalStatPoints", () => {
   it("sums all five stats", () => {
     const stats = { STR: 1, AGI: 2, VIT: 3, INT: 4, FOCUS: 5 };
     expect(totalStatPoints(stats)).toBe(15);
+  });
+});
+
+describe("calcStatGain", () => {
+  it.each([
+    ["easy", 1],
+    ["normal", 2],
+    ["hard", 3],
+  ] as const)("difficulty %s awards %i stat point(s)", (difficulty, expected) => {
+    expect(calcStatGain(difficulty)).toBe(expected);
   });
 });
