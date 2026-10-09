@@ -1,21 +1,50 @@
+import { ActivityIndicator, View } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { AuthProvider, useSession } from "../lib/AuthProvider";
+import { COLORS } from "../lib/theme";
 
-const COLORS = {
-  background: "#0B0B14",
-};
+function RootLayoutNav() {
+  const { session, loading } = useSession();
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: COLORS.background,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <ActivityIndicator color={COLORS.violet} />
+      </View>
+    );
+  }
+
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.background },
+        headerTintColor: COLORS.text,
+        contentStyle: { backgroundColor: COLORS.background },
+      }}
+    >
+      <Stack.Protected guard={!!session}>
+        <Stack.Screen name="(app)" options={{ headerShown: false }} />
+      </Stack.Protected>
+      <Stack.Protected guard={!session}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      </Stack.Protected>
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   return (
-    <>
+    <AuthProvider>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: COLORS.background },
-          headerTintColor: "#F5F3FF",
-          contentStyle: { backgroundColor: COLORS.background },
-        }}
-      />
-    </>
+      <RootLayoutNav />
+    </AuthProvider>
   );
 }
