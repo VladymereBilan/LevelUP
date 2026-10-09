@@ -102,6 +102,13 @@ Streak logic, the daily XP cap, and quest dates all use the user's **local** dat
 - Conventional commits: `feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`.
 - Package scope is `@levelup/*` (`@levelup/engine`, `@levelup/db`, `@levelup/mobile`,
   `@levelup/web`).
+- A pre-commit hook (`.githooks/pre-commit`, zero dependencies) blocks commits containing a
+  JWT-looking string (`eyJ...`) or a Supabase `sb_secret_...` key outside `.env`/`.env.local`/
+  `.env.*.local` — `.env.example` is deliberately NOT exempt, since that's a tracked template
+  meant to hold only blanks. Run `pnpm prepare` once after cloning to activate it (`pnpm install`
+  should do this automatically via the `prepare` script, but pnpm doesn't reliably run it when
+  there's no install work to do — `pnpm prepare` is the reliable fallback). Bypassable with
+  `git commit --no-verify`; it's a safety net, not a guarantee.
 - Theme: dark UI, violet `#7C3AED` + blue `#3B82F6` accents, glow effects. Notification copy is
   friendly and original (e.g. "New Quest Available") — never copied wording from any existing
   franchise.

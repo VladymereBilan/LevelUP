@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+
+/**
+ * Blocks a commit if any staged file contains a JWT-looking string
+ * (eyJ...) or a Supabase "sb_secret" key, outside the files meant to hold
+ * real local secrets (.env, .env.local, .env.*.local — all gitignored).
+ *
+ * .env.example is deliberately NOT exempt: it's a tracked template meant
+ * to hold only blank placeholders. This hook exists because a real anon
+ * key and service-role key ended up pasted into it once already — see the
+ * git history around the Supabase schema work for the incident this is
+ * guarding against.
+ *
+ * Zero dependencies on purpose (just Node's own child_process/fs/path) —
+ * this only needs to run as a git hook, not be installed as a package.
+ * Bypassable with `git commit --no-verify`; this is a safety net, not a
+ * guarantee.
+ */
+
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+
+const JWT_PATTERN = /eyJ[A-Za-z0-9_-]{10,}/;
+const SB_SECRET_PATTERN = /sb_secret_[A-Za-z0-9_-]+/;
+
+// Matches .env, .env.local, .env.production.local, etc. — NOT .env.example
+// (or anything else whose last segment isn't literally "local").
+const EXEMPT_ENV_FILENAME = /^\.env(\.[^.]+)?\.local$|^\.env$/;
+
+function stagedFiles() {
+  // --numstat's "-\t-\t<path>" rows mark binary files — skip those rather
+  // than regex-scanning arbitrary binary content.
+  const output = execFileSync("git", ["diff", "--cached", "--numstat", "--diff-filter=ACM"], {
+    encoding: "utf-8",
+  });
+
+  return output
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [added, removed, ...pathParts] = line.split("\t");
+      return { filePath: pathParts.join("\t"), binary: added === "-" && removed === "-" };
+    });
+}
+
+function stagedContent(filePath) {
+  return execFileSync("git", ["show", `:${filePath}`], { encoding: "utf-8" });
+}
+
+function findViolations(filePath, content) {
+  const violations = [];
+  const lines = content.split("\n");
+
+  lines.forEach((line, index) => {
+    if (JWT_PATTERN.test(line)) {
+      violations.push(`${filePath}:${index + 1}: looks like a JWT (eyJ...)`);
+    }
+    if (SB_SECRET_PATTERN.test(line)) {
+      violations.push(`${filePath}:${index + 1}: looks like a Supabase secret key (sb_secret_...)`);
+    }
+  });
+
+  return violations;
+}
+
+function main() {
+  const violations = [];
+
+  for (const { filePath, binary } of stagedFiles()) {
+    if (binary) continue;
+    if (EXEMPT_ENV_FILENAME.test(path.basename(filePath))) continue;
+
+    let content;
+    try {
+      content = stagedContent(filePath);
+    } catch {
+      continue; // e.g. a deleted/renamed path with nothing left to read
+    }
+
+    violations.push(...findViolations(filePath, content));
+  }
+
+  if (violations.length > 0) {
+    console.error("pre-commit: blocked — possible secret(s) in staged files:\n");
+    for (const violation of violations) {
+      console.error(`  ${violation}`);
+    }
+    console.error(
+      "\nIf this is a real secret: unstage it and move it to .env.local (gitignored) instead.",
+    );
+    console.error("If this is a false positive: git commit --no-verify (only if you're sure).");
+    process.exit(1);
+  }
+}
+
+main();
