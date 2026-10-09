@@ -1,21 +1,20 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
+import {
+  createVerifiedServiceRoleClient,
+  createSignedInTestUser,
+  isSupabaseTestEnvConfigured,
+  warnSkippingSupabaseTests,
+  type TestUser,
+} from "../testing";
 import type { Database } from "../database.types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Proves the RLS policies in
  * packages/db/supabase/migrations/20260310000007_rls_policies.sql actually
  * block what they're meant to block, against a real Supabase — local
- * (`supabase start`) or a hosted project both work; there is no way to
- * verify this against anything less than a real Postgres + PostgREST (RLS
- * is enforced by Postgres itself, and the service_role vs. authenticated
- * distinction only exists through PostgREST's JWT handling).
- *
- * This suite only SKIPS when SUPABASE_URL isn't set at all — a genuinely
- * unconfigured environment. Once a URL is configured, a problem (host
- * unreachable, a rejected key, a missing RLS_TEST_ALLOW_REMOTE opt-in for a
- * non-local host) is a FAILURE, not a quiet skip: a configured-but-broken
- * setup is worth surfacing loudly, not hiding behind "skipped".
+ * (`supabase start`) or a hosted project both work. See ../testing.ts for
+ * the skip/fail policy this (and every other real-DB suite) follows.
  *
  * To actually run it:
  *   Local:  npx supabase start (from packages/db — requires Docker), then
@@ -23,135 +22,21 @@ import type { Database } from "../database.types";
  *   Hosted: set SUPABASE_URL/SUPABASE_ANON_KEY/SUPABASE_SERVICE_ROLE_KEY to
  *           the project's values, set RLS_TEST_ALLOW_REMOTE=true, then
  *           pnpm --filter @levelup/db test:rls
- *
- * This suite creates and deletes real throwaway auth users against
- * whichever project SUPABASE_URL points at — never run it against a
- * project you're not prepared for that on.
  */
 
-const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
-const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+const TEST_FILE_LABEL = "rls.test.ts";
+const configured = isSupabaseTestEnvConfigured();
 
-function missingEnvVarNames(): string[] {
-  const missing: string[] = [];
-  if (!SUPABASE_URL) missing.push("SUPABASE_URL");
-  if (!ANON_KEY) missing.push("SUPABASE_ANON_KEY");
-  if (!SERVICE_ROLE_KEY) missing.push("SUPABASE_SERVICE_ROLE_KEY");
-  return missing;
+if (!configured) {
+  warnSkippingSupabaseTests(TEST_FILE_LABEL);
 }
 
-// The only skip condition. Everything past this point either runs or fails
-// — see the file-level comment above for why.
-const skip = !SUPABASE_URL;
-
-if (skip) {
-  console.warn(
-    `[rls.test.ts] Skipping: no SUPABASE_URL configured. ` +
-      `Missing/empty env var(s): ${missingEnvVarNames().join(", ")}. Values are never logged. ` +
-      "Point these at a local (`npx supabase start`) or hosted Supabase project, then re-run " +
-      "`pnpm --filter @levelup/db test:rls`. See packages/db/README.md.",
-  );
-}
-
-function isLocalHost(hostname: string): boolean {
-  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
-}
-
-interface TestUser {
-  user: User;
-  client: SupabaseClient<Database>;
-}
-
-async function createSignedInTestUser(
-  admin: SupabaseClient<Database>,
-  label: string,
-): Promise<TestUser> {
-  const email = `rls-test-${label}-${crypto.randomUUID()}@example.com`;
-  const password = crypto.randomUUID();
-
-  const { data: created, error: createError } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-  if (createError || !created.user) {
-    throw new Error(`Failed to create test user "${label}": ${createError?.message}`);
-  }
-
-  const anon = createClient<Database>(SUPABASE_URL, ANON_KEY);
-  const { data: signedIn, error: signInError } = await anon.auth.signInWithPassword({
-    email,
-    password,
-  });
-  if (signInError || !signedIn.session) {
-    throw new Error(`Failed to sign in test user "${label}": ${signInError?.message}`);
-  }
-
-  const client = createClient<Database>(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${signedIn.session.access_token}` } },
-  });
-
-  return { user: created.user, client };
-}
-
-describe.skipIf(skip)("RLS policies", () => {
-  // Created in beforeAll, not at describe-body scope: describe.skipIf still
-  // runs this factory function to collect the test tree even when the
-  // whole suite is skipped, so anything that touches SERVICE_ROLE_KEY (empty
-  // when skipped) must be deferred into a hook, not evaluated here.
+describe.skipIf(!configured)("RLS policies", () => {
   let admin: SupabaseClient<Database>;
   const createdUserIds: string[] = [];
 
   beforeAll(async () => {
-    const host = new URL(SUPABASE_URL).host;
-    const hostname = new URL(SUPABASE_URL).hostname;
-    // Printed before anything else — including before the remote-host
-    // guard below — so it's visible no matter how this beforeAll ends.
-    console.log(`[rls.test.ts] Supabase host: ${host}`);
-
-    if (!isLocalHost(hostname) && process.env.RLS_TEST_ALLOW_REMOTE !== "true") {
-      throw new Error(
-        `Refusing to run RLS tests against non-local host "${host}" without ` +
-          "RLS_TEST_ALLOW_REMOTE=true. This suite creates and deletes real auth users. " +
-          "Set RLS_TEST_ALLOW_REMOTE=true only if you intend to run it against this project.",
-      );
-    }
-
-    // Reachability: network-level only. ANY HTTP response — including a
-    // 401 (e.g. a missing/rejected apikey header) — means the host is
-    // reachable; only a thrown network error (DNS failure, connection
-    // refused, TLS error, timeout) means it isn't.
-    let healthResponse: Response;
-    try {
-      healthResponse = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
-        headers: { apikey: ANON_KEY },
-        signal: AbortSignal.timeout(5000),
-      });
-    } catch (networkError) {
-      const reason = networkError instanceof Error ? networkError.message : String(networkError);
-      throw new Error(`Supabase at "${host}" is unreachable (network error): ${reason}`);
-    }
-    console.log(`[rls.test.ts] Reachability probe: HTTP ${healthResponse.status} from ${host}`);
-
-    // Key validation: a configured-but-wrong key is a FAILURE, not a skip.
-    const anonCheck = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-      headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!anonCheck.ok) {
-      throw new Error(
-        `Supabase anon key rejected at "${host}": HTTP ${anonCheck.status} ${anonCheck.statusText}`,
-      );
-    }
-
-    admin = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-    const { error: serviceCheckError } = await admin.auth.admin.listUsers({ perPage: 1 });
-    if (serviceCheckError) {
-      throw new Error(`Supabase service key invalid at "${host}": ${serviceCheckError.message}`);
-    }
+    admin = await createVerifiedServiceRoleClient(TEST_FILE_LABEL);
   });
 
   afterAll(async () => {
@@ -214,13 +99,7 @@ describe.skipIf(skip)("RLS policies", () => {
 
     const { data: created, error: insertError } = await a.client
       .from("categories")
-      .insert({
-        user_id: a.user.id,
-        name: "Strength",
-        color: "#7C3AED",
-        icon: "dumbbell",
-        stat: "STR",
-      })
+      .insert({ user_id: a.user.id, name: "Strength", color: "#7C3AED", icon: "dumbbell", stat: "STR" })
       .select("id")
       .single();
     expect(insertError).toBeNull();
@@ -300,11 +179,7 @@ describe.skipIf(skip)("RLS policies", () => {
       .single();
     expect(seedError).toBeNull();
 
-    const { data: readBack } = await a.client
-      .from("titles")
-      .select("id")
-      .eq("id", title!.id)
-      .maybeSingle();
+    const { data: readBack } = await a.client.from("titles").select("id").eq("id", title!.id).maybeSingle();
     expect(readBack?.id).toBe(title!.id);
 
     const { error: writeError } = await a.client
