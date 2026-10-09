@@ -75,8 +75,8 @@ extension-less resolves correctly everywhere (tsc, Vitest, Next, Metro).
 
 - Strict TypeScript everywhere, `@typescript-eslint/no-explicit-any` is an error, not a warning.
   No `any`. No implicit type-safety escape hatches.
-- No comments explaining *what* code does — names should do that. Comments only for non-obvious
-  *why* (a constraint, an invariant, a workaround).
+- No comments explaining _what_ code does — names should do that. Comments only for non-obvious
+  _why_ (a constraint, an invariant, a workaround).
 - Don't add abstractions, config options, or error handling for cases that can't happen yet.
 - Conventional commits: `feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`.
 - Package scope is `@levelup/*` (`@levelup/engine`, `@levelup/db`, `@levelup/mobile`,
