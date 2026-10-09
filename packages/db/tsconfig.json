@@ -4,8 +4,7 @@
     "composite": false,
     "declaration": false,
     "noEmit": true,
-    "rootDir": "src",
     "outDir": "dist"
   },
-  "include": ["src"]
+  "include": ["src", "*.ts"]
 }

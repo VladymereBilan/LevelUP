@@ -8,15 +8,21 @@ everything here either needs the service-role key or is server-only Node code.
 
 ```
 supabase/
-  config.toml           Supabase CLI project config
-  migrations/            Sequential SQL migrations (schema, RLS, functions) — see below
+  config.toml                    Supabase CLI project config
+  migrations/                     Sequential SQL migrations (schema, RLS, functions) — see below
 src/
-  database.types.ts      Database type (hand-authored — see "Regenerating types")
-  client.ts               createServiceRoleClient()
-  seed.ts                 seedStarterTemplate(userId, templateId) — copies an @levelup/engine
-                           starter template into a user's own categories/activities
-  cli/seed.ts              CLI wrapper: `pnpm seed <userId> <templateId>`
-  __tests__/rls.test.ts    RLS test suite (see "Running the RLS tests")
+  database.types.ts               Database type — generated, see "Regenerating types"
+  client.ts                        createServiceRoleClient()
+  testing.ts                       Shared real-DB test helpers (exported as "@levelup/db/testing") —
+                                    reachability/key-validation/remote-host-guard logic every
+                                    real-DB suite in this repo uses, here and in apps/web
+  seed.ts                          seedStarterTemplate(userId, templateId) — copies an
+                                    @levelup/engine starter template into a user's own
+                                    categories/activities
+  cli/seed.ts                      CLI wrapper: `pnpm seed <userId> <templateId>`
+  __tests__/rls.test.ts            RLS test suite (see "Running the real-DB tests")
+  __tests__/rpc-privileges.test.ts Proves complete_quest/generate_daily_quests/check_rate_limit
+                                    can't be called directly by an authenticated client
 ```
 
 ## The authority rule this schema enforces
@@ -43,24 +49,28 @@ npx supabase db reset       # applies every migration in supabase/migrations, fr
 your root `.env` (see `.env.example`) as `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
 `SUPABASE_SERVICE_ROLE_KEY`.
 
-**This repo's dev environment doesn't have Docker**, so none of the SQL below has been executed
-against a real Postgres — only syntax-validated offline against `libpg_query` (via the `pglast`
-Python package, which exposes the real Postgres SQL and PL/pgSQL parsers without needing a
-running server). Run `supabase db reset` yourself once Docker is available, before trusting this
-schema in anything beyond local dev.
+**This repo's dev environment doesn't have Docker**, so the migrations have never run against a
+_local_ Postgres — only syntax-validated offline against `libpg_query` (via the `pglast` Python
+package). They have, however, been applied to and verified against the hosted dev project (see
+"Running the real-DB tests" below) — that's a real Postgres, just not a local one. Run
+`supabase db reset` against a local instance too before trusting this schema there specifically.
 
 ## Regenerating `database.types.ts`
 
-It's hand-authored right now (see the comment at the top of the file for why). Once you have a
-reachable Supabase, replace it for real:
+Generated from the real schema (not hand-authored — see the comment at the top of the file):
 
 ```bash
-# against a local instance (after `supabase start`):
-npx supabase gen types typescript --local > src/database.types.ts
-
-# or against a linked hosted project:
+# against a linked hosted project:
 npx supabase gen types typescript --project-id <ref> > src/database.types.ts
+
+# or against a local instance (after `supabase start`):
+npx supabase gen types typescript --local > src/database.types.ts
 ```
+
+Regenerate after any migration change. `--project-id` worked in this repo's dev environment with
+no `supabase login` / access token needed — apparently project-id mode doesn't require Management
+API auth, just network access to the project. If that ever stops being true, `supabase login`
+first.
 
 ## Seeding a user's starter template
 
@@ -72,51 +82,72 @@ Copies that `@levelup/engine` template's categories and activities as that user'
 Templates aren't stored as ownerless rows in the database — every `categories`/`activities` row
 has a required `user_id`, which is what lets RLS scope rows to their owner.
 
-## Running the RLS tests
+## Running the real-DB tests
 
-`src/__tests__/rls.test.ts` is a real integration test against a live Supabase — there's no way
-to verify Postgres's row-level security short of running Postgres. It works against either a
-local instance (`supabase start`) or a hosted project; it doesn't care which.
+Three suites run against a real Supabase — there's no way to verify Postgres's row-level
+security, a server-only function's privileges, or a route handler's DB writes short of a real
+Postgres + PostgREST:
 
-**It only skips when `SUPABASE_URL` isn't set at all.** Once a URL is configured, anything else
+| Suite                                     | Proves                                                                                                                                                                                                     |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/__tests__/rls.test.ts`               | The RLS policies actually block what they're meant to (see "The authority rule" above)                                                                                                                     |
+| `src/__tests__/rpc-privileges.test.ts`    | `complete_quest`/`generate_daily_quests`/`check_rate_limit` can't be called directly over RPC by an authenticated client                                                                                   |
+| `apps/web/app/.../complete/route.test.ts` | The full completion route end-to-end: normal completion, idempotent replay, cross-user rejection, level-up, the daily cap, and the Asia/Manila local-date boundary — see `apps/web`'s own test for details |
+
+All three share `src/testing.ts` (exported as `@levelup/db/testing`) and follow the same policy:
+**they only skip when `SUPABASE_URL` isn't set at all.** Once a URL is configured, anything else
 wrong — the host unreachable, a rejected key, a missing opt-in for a non-local host — is a
 **test failure**, not a silent skip. A configured-but-broken setup is a real problem and should
-show up loudly, not get hidden behind "skipped". When it does skip, the message says exactly
+show up loudly, not get hidden behind "skipped". When a suite does skip, the message says exactly
 which env var(s) are missing or empty (never their values).
 
 ```bash
 # local (from packages/db, requires Docker):
 npx supabase start
 npx supabase db reset
-pnpm --filter @levelup/db test:rls
+pnpm --filter @levelup/db test              # rls + rpc-privileges
+pnpm --filter @levelup/web test              # the route-handler suite
 
 # hosted project:
 # set SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY to the project's values
-RLS_TEST_ALLOW_REMOTE=true pnpm --filter @levelup/db test:rls
+RLS_TEST_ALLOW_REMOTE=true pnpm --filter @levelup/db test
+RLS_TEST_ALLOW_REMOTE=true pnpm --filter @levelup/web test
 ```
 
 `RLS_TEST_ALLOW_REMOTE=true` is required for any non-local host (anything but `localhost`/
-`127.0.0.1`/`::1`) — a deliberate safety guard, since this suite creates and deletes real
-throwaway auth users against whatever project `SUPABASE_URL` points at. The resolved host is
-logged before that guard is even checked, so you always know what you were about to hit.
+`127.0.0.1`/`::1`) — a deliberate safety guard, since these suites create and delete real
+throwaway auth users (and rows) against whatever project `SUPABASE_URL` points at. The resolved
+host is logged before that guard is even checked, so you always know what you were about to hit.
 
-Before running anything, the suite validates the environment in this order:
+Before running anything, each suite validates the environment in this order:
 
 1. **Reachability** (network-level only): a request to the project's auth health endpoint.
    _Any_ HTTP response — including a `401` — counts as reachable; only a thrown network error
    (DNS failure, connection refused, TLS error, timeout) means it isn't.
-2. **Anon key**: a plain request to the PostgREST root endpoint. A non-2xx response fails the
-   suite with the HTTP status — e.g. a rejected key (wrong project, rotated JWT secret, bad copy
-   /paste) shows up as "anon key rejected: HTTP 401", not a vague "unreachable".
+2. **Anon key**: a request to `/auth/v1/settings` (not `/rest/v1/` — that endpoint is
+   `service_role`-only on some projects regardless of the anon key's validity, and any actual
+   table would depend on that table's own RLS grants for `anon`; `/auth/v1/settings` validates
+   the apikey alone). A non-2xx response fails the suite with the HTTP status — e.g. a rejected
+   key (wrong project, rotated JWT secret, bad copy/paste) shows up as "anon key rejected: HTTP
+   401", not a vague "unreachable".
 3. **Service key**: a trivial admin call (`listUsers({ perPage: 1 })`). An error here fails the
    suite as "service key invalid".
 
-Only past all three does it create test users. It creates two throwaway auth users per test
-(cleaned up in `afterAll`, including when a test fails), signs in as each via the anon key, and
-asserts things like: a user can't read another user's profile; no client can write
-`level`/`xp`/`rank`/`stats` or insert into `xp_events`; a user can update their own quest's
-`progress` but not flip its `status` to `completed`; `titles` is readable by any authenticated
-user but not writable; `user_challenges` can't be written by a client at all.
+Only past all three does a suite create test users/rows, and `afterAll` cleans them up (including
+when a test fails). `rls.test.ts` asserts things like: a user can't read another user's profile;
+no client can write `level`/`xp`/`rank`/`stats` or insert into `xp_events`; a user can update
+their own quest's `progress` but not flip its `status` to `completed`; `titles` is readable by
+any authenticated user but not writable; `user_challenges` can't be written by a client at all.
+
+**Both packages auto-load root `.env.local`** (`vitest.setup.ts` in each — a ~15-line
+dependency-free loader, mirrored in both so they behave identically). That means if you have
+`.env.local` configured with a hosted project's credentials, a plain `pnpm test` from the repo
+root will pick it up and attempt these suites too — correctly **failing**, not skipping, on the
+remote-host guard until you set `RLS_TEST_ALLOW_REMOTE=true`. Two ways to live with that day to
+day: pass the env var each time you deliberately want the real run (as shown above), or — once
+you're genuinely comfortable with routine `pnpm test` runs hitting this project — add
+`RLS_TEST_ALLOW_REMOTE=true` to your own `.env.local` (it's gitignored and personal) so it's
+always on for you. A fresh clone with no `.env.local` at all still skips cleanly either way.
 
 ## Functions
 
