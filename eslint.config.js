@@ -18,6 +18,8 @@ export default tseslint.config(
       // Expo specific rules) and are linted via their own package scripts.
       "apps/web/**",
       "apps/mobile/**",
+      // Figma Make export + screenshots — foreign toolchain, not ours to lint.
+      "design/**",
     ],
   },
   js.configs.recommended,

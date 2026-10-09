@@ -6,3 +6,6 @@ build
 .turbo
 coverage
 pnpm-lock.yaml
+
+# Figma Make export + screenshots — foreign toolchain/content, not ours to format
+design
