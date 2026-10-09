@@ -33,13 +33,14 @@ apps/
             once it exists; the server is the eventual source of truth for XP)
 packages/
   engine/   Pure TypeScript, zero runtime dependencies. The XP/level/rank/streak/penalty rules
-            and the shared domain types. Imported by both apps (and, later, the server).
-  db/       Placeholder for the Supabase Postgres schema (packages/db/schema/) and generated
-            types (packages/db/src), populated once the backend is implemented.
+            and the shared domain types. Imported by both apps and apps/web's server routes.
+  db/       Supabase Postgres schema + RLS (packages/db/supabase/migrations/), the
+            service-role client, hand-authored DB types, and the starter-template seed script.
+            See packages/db/README.md.
 ```
 
-Planned (not yet implemented): Supabase (Postgres, Auth, RLS) as the backend, Google Sign-In.
-`packages/db` and the auth/data layer in `apps/web` are where that work will land.
+Google Sign-In (planned, not yet implemented): via a Google Cloud project, wired into
+`apps/web`'s and `apps/mobile`'s auth layers once built.
 
 ### `packages/engine`
 
@@ -71,6 +72,26 @@ themselves. Keep internal imports within the package extension-less (`from "./ty
 `"./types.js"`) — Metro's resolver doesn't do TypeScript's `.js`-maps-to-`.ts` trick, and
 extension-less resolves correctly everywhere (tsc, Vitest, Next, Metro).
 
+### Server-authoritative state (`packages/db`, `apps/web`)
+
+Level, XP, rank, and stats are **never** writable by a client, directly or indirectly.
+`profiles`/`stats`/`streaks`/`xp_events` grant `authenticated` `SELECT` only — there is no
+`INSERT`/`UPDATE`/`DELETE` policy on any of them for a client role. The only way those values
+change is through `complete_quest()`, a Postgres function whose `EXECUTE` is granted to
+`service_role` alone, called by `apps/web`'s `POST /api/quests/[id]/complete` route handler after
+it verifies the caller's JWT itself. That route is also where `@levelup/engine` actually runs
+(`recordStreakCompletion` → `calcQuestXp` → `capDailyXp` → `awardXp` → `getRank` →
+`calcStatGain`/`applyStatGain`) — the Postgres function is a thin, atomic writer for
+already-computed values, not where game rules live.
+
+Every table in `packages/db/supabase/migrations/` explicitly `REVOKE ALL` before granting back
+exactly what's intended, rather than relying on Supabase's platform-default table grants — see
+the comment at the top of the RLS migration.
+
+Streak logic, the daily XP cap, and quest dates all use the user's **local** date
+(`getLocalDateString(now, profile.timezone)` from `@levelup/engine`), never the server's UTC day
+— a naive UTC date would misclassify completions near local midnight.
+
 ## Conventions
 
 - Strict TypeScript everywhere, `@typescript-eslint/no-explicit-any` is an error, not a warning.
@@ -99,7 +120,8 @@ Run from the repo root (Turborepo fans these out to every package; cached where 
 ```bash
 pnpm dev          # start mobile (Expo) and web (Next.js) dev servers
 pnpm build        # production build (web only has a real build in Phase 0)
-pnpm test         # run all test suites (currently: packages/engine's Vitest suite)
+pnpm test         # run all test suites (packages/engine + packages/db; db's RLS suite
+                  #   skips clearly if no local Supabase is reachable — see its README)
 pnpm lint         # eslint across every package
 pnpm typecheck    # tsc --noEmit across every package (web runs `next typegen` first)
 pnpm format       # prettier --write .
@@ -109,10 +131,12 @@ pnpm format:check # prettier --check .
 Per-package, from the repo root: `pnpm --filter @levelup/engine test`, etc. Or `cd` into the
 package and run its own `package.json` scripts directly.
 
-## Backend (not yet built)
+## Backend
 
-Supabase Postgres + Auth + RLS, Google Sign-In via a Google Cloud project. When this lands:
-tables in `packages/db/schema/` should mirror the shared types in `packages/engine`, RLS policies
-scope every row to `auth.uid()`, and XP-awarding mutations move server-side (an API route in
-`apps/web` or a Supabase Edge Function) so the engine's pure functions run once, authoritatively,
-instead of being trusted from the client.
+Supabase Postgres + Auth + RLS — schema and policies in `packages/db/supabase/migrations/`,
+consumed via `packages/db`'s service-role client and `apps/web`'s route handlers. **Not yet
+executed against a real Postgres**: this dev environment has no Docker, so the SQL is only
+syntax-validated offline (via `libpg_query`/`pglast`), not run. Run `npx supabase start` +
+`npx supabase db reset` from `packages/db` before trusting it beyond local dev — see
+`packages/db/README.md` for the full local-dev, type-regeneration, seeding, and RLS-test-running
+instructions. Google Sign-In (via a Google Cloud project) is still planned, not yet implemented.
