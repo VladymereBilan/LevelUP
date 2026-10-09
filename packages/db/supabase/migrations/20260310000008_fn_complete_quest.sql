@@ -89,8 +89,13 @@ begin
         completed_at = now()
     where id = p_quest_id;
 
-  insert into public.xp_events (user_id, quest_id, amount, reason)
-    values (p_user_id, p_quest_id, p_xp_awarded, p_reason);
+  -- xp_events.amount has a CHECK (amount <> 0): the daily cap can legitimately
+  -- bring the award to 0 (quest still completes, just earns no XP), so only
+  -- log an event when there's a nonzero amount to log.
+  if p_xp_awarded <> 0 then
+    insert into public.xp_events (user_id, quest_id, amount, reason)
+      values (p_user_id, p_quest_id, p_xp_awarded, p_reason);
+  end if;
 
   update public.profiles
     set level = p_new_level, xp = p_new_xp, rank = p_new_rank
