@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
-  transpilePackages: ["@levelup/engine"],
+  transpilePackages: ["@levelup/engine", "@levelup/db"],
   turbopack: {
     rules: {
       "*.css": {
