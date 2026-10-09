@@ -117,6 +117,9 @@ export async function createVerifiedServiceRoleClient(
 export interface TestUser {
   user: User;
   client: SupabaseClient<Database>;
+  /** Raw access token — for constructing an `Authorization` header directly
+   * (e.g. calling a route handler's exported function in-process). */
+  accessToken: string;
 }
 
 /** Creates a confirmed auth user and returns a client signed in as them via the anon key. */
@@ -149,5 +152,5 @@ export async function createSignedInTestUser(
     global: { headers: { Authorization: `Bearer ${signedIn.session.access_token}` } },
   });
 
-  return { user: created.user, client };
+  return { user: created.user, client, accessToken: signedIn.session.access_token };
 }

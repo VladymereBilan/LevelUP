@@ -99,7 +99,13 @@ describe.skipIf(!configured)("RLS policies", () => {
 
     const { data: created, error: insertError } = await a.client
       .from("categories")
-      .insert({ user_id: a.user.id, name: "Strength", color: "#7C3AED", icon: "dumbbell", stat: "STR" })
+      .insert({
+        user_id: a.user.id,
+        name: "Strength",
+        color: "#7C3AED",
+        icon: "dumbbell",
+        stat: "STR",
+      })
       .select("id")
       .single();
     expect(insertError).toBeNull();
@@ -179,7 +185,11 @@ describe.skipIf(!configured)("RLS policies", () => {
       .single();
     expect(seedError).toBeNull();
 
-    const { data: readBack } = await a.client.from("titles").select("id").eq("id", title!.id).maybeSingle();
+    const { data: readBack } = await a.client
+      .from("titles")
+      .select("id")
+      .eq("id", title!.id)
+      .maybeSingle();
     expect(readBack?.id).toBe(title!.id);
 
     const { error: writeError } = await a.client
