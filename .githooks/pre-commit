@@ -27,6 +27,13 @@ const SB_SECRET_PATTERN = /sb_secret_[A-Za-z0-9_-]+/;
 // (or anything else whose last segment isn't literally "local").
 const EXEMPT_ENV_FILENAME = /^\.env(\.[^.]+)?\.local$|^\.env$/;
 
+// Machine-generated lockfiles: never hand-edited, content is exclusively
+// package names/versions/integrity hashes. A long base64 hash can
+// coincidentally contain "eyJ" + 10+ base64 characters with zero relation
+// to an actual JWT (this happened in practice with an sha512 integrity
+// hash) — exempt them rather than loosen the pattern everywhere else.
+const EXEMPT_LOCKFILE = /^(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|bun\.lockb?)$/;
+
 function stagedFiles() {
   // --numstat's "-\t-\t<path>" rows mark binary files — skip those rather
   // than regex-scanning arbitrary binary content.
@@ -68,7 +75,9 @@ function main() {
 
   for (const { filePath, binary } of stagedFiles()) {
     if (binary) continue;
-    if (EXEMPT_ENV_FILENAME.test(path.basename(filePath))) continue;
+    const basename = path.basename(filePath);
+    if (EXEMPT_ENV_FILENAME.test(basename)) continue;
+    if (EXEMPT_LOCKFILE.test(basename)) continue;
 
     let content;
     try {
