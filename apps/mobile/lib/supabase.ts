@@ -1,17 +1,18 @@
 import { AppState } from "react-native";
 import { createClient } from "@supabase/supabase-js";
+import type { Rank } from "@levelup/engine";
 import { chunkedSecureStorage } from "./secureStorage";
 
 /**
- * A minimal local view of the `profiles` row — just the columns this app
- * actually reads. Deliberately NOT imported from @levelup/db: that
- * package's own README states it's never imported from apps/mobile (it
- * also carries server-only code gated on the service-role key, which must
- * never ship in this app's bundle). Must stay in sync with
- * packages/db/src/database.types.ts's `profiles` table by hand — a
- * read-only, types-only package shared by all three (engine already plays
- * this role for game-rule types) would be a reasonable thing to extract if
- * more tables end up needed here.
+ * A minimal local view of the `profiles`/`stats`/`streaks` rows — just the
+ * columns this app actually reads. Deliberately NOT imported from
+ * @levelup/db: that package's own README states it's never imported from
+ * apps/mobile (it also carries server-only code gated on the service-role
+ * key, which must never ship in this app's bundle). Must stay in sync with
+ * packages/db/src/database.types.ts by hand — a read-only, types-only
+ * package shared by all three (engine already plays this role for
+ * game-rule types) would be a reasonable thing to extract if more tables
+ * end up needed here.
  */
 export interface MobileDatabase {
   public: {
@@ -22,10 +23,29 @@ export interface MobileDatabase {
           username: string;
           level: number;
           xp: number;
-          rank: string;
+          rank: Rank;
           title_id: string | null;
           timezone: string;
           created_at: string;
+        };
+      };
+      stats: {
+        Row: {
+          user_id: string;
+          str: number;
+          agi: number;
+          vit: number;
+          int: number;
+          focus: number;
+        };
+      };
+      streaks: {
+        Row: {
+          user_id: string;
+          current: number;
+          longest: number;
+          last_completed_date: string | null;
+          grace_days_used: number;
         };
       };
     };

@@ -46,8 +46,19 @@ export function LevelBadge({ level, width = 86, height = 96 }: LevelBadgeProps) 
         </G>
       </Svg>
       <View className="absolute inset-0 items-center justify-center">
-        <Text style={{ color: colors.violetLight, fontSize: 8, fontWeight: "700", letterSpacing: 1.2 }}>LEVEL</Text>
-        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 32, lineHeight: 34 }}>
+        <Text
+          style={{ color: colors.violetLight, fontSize: 8, fontWeight: "700", letterSpacing: 1.2 }}
+        >
+          LEVEL
+        </Text>
+        <Text
+          style={{
+            color: colors.text,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: 32,
+            lineHeight: 34,
+          }}
+        >
           {String(level).padStart(2, "0")}
         </Text>
       </View>

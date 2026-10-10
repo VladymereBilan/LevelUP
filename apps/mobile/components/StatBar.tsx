@@ -35,13 +35,25 @@ export function StatBar({ stat, value }: StatBarProps) {
       </View>
       <View className="min-w-0 flex-1 gap-1.5">
         <View className="flex-row items-center">
-          <Text style={{ width: 34, color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 10 }}>
+          <Text
+            style={{
+              width: 34,
+              color: colors.text,
+              fontFamily: fonts.displaySemiBold,
+              fontSize: 10,
+            }}
+          >
             {stat === "FOCUS" ? "FOC" : stat}
           </Text>
           <Text style={{ flex: 1, color: colors.muted, fontSize: 9 }}>{statLabels[stat]}</Text>
-          <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 10 }}>{value}</Text>
+          <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 10 }}>
+            {value}
+          </Text>
         </View>
-        <View className="h-1 overflow-hidden rounded-full" style={{ backgroundColor: "rgba(11,11,20,0.85)" }}>
+        <View
+          className="h-1 overflow-hidden rounded-full"
+          style={{ backgroundColor: "rgba(11,11,20,0.85)" }}
+        >
           <View
             style={{
               width: `${Math.min(100, (percent / DISPLAY_CEILING) * 100)}%`,

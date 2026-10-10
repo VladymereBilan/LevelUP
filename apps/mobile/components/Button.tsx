@@ -23,7 +23,14 @@ const TEXT_COLOR: Record<ButtonVariant, string> = {
 };
 
 /** Primary (gradient), secondary (tinted outline), ghost (text-only), and google (OAuth pill) button styles. */
-export function Button({ children, onPress, variant = "primary", icon, disabled, loading }: ButtonProps) {
+export function Button({
+  children,
+  onPress,
+  variant = "primary",
+  icon,
+  disabled,
+  loading,
+}: ButtonProps) {
   const [pressed, setPressed] = useState(false);
   const isDisabled = disabled || loading;
   const textColor = TEXT_COLOR[variant];
@@ -37,8 +44,12 @@ export function Button({ children, onPress, variant = "primary", icon, disabled,
         <ActivityIndicator color={textColor} />
       ) : (
         <>
-          {icon ? <Icon name={icon} size={18} color={variant === "google" ? "#4285F4" : textColor} /> : null}
-          <Text style={{ color: textColor, fontFamily: fonts.bodyBold, fontSize: 13 }}>{children}</Text>
+          {icon ? (
+            <Icon name={icon} size={18} color={variant === "google" ? "#4285F4" : textColor} />
+          ) : null}
+          <Text style={{ color: textColor, fontFamily: fonts.bodyBold, fontSize: 13 }}>
+            {children}
+          </Text>
           {variant === "primary" ? <Icon name="arrow" size={17} color={textColor} /> : null}
         </>
       )}

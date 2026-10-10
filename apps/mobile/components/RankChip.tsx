@@ -30,7 +30,9 @@ export function RankChip({ rank, width = 26, height = 21 }: RankChipProps) {
         <Polygon points={hexPoints(width, height)} fill="rgba(59,130,246,0.16)" />
       </Svg>
       <View className="absolute inset-0 items-center justify-center">
-        <Text style={{ color: colors.blueLight, fontFamily: fonts.displaySemiBold, fontSize: 11 }}>{rank}</Text>
+        <Text style={{ color: colors.blueLight, fontFamily: fonts.displaySemiBold, fontSize: 11 }}>
+          {rank}
+        </Text>
       </View>
     </View>
   );

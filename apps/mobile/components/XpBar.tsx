@@ -25,7 +25,11 @@ export function XpBar({ current, max, height = 7 }: XpBarProps) {
   const shimmer = useSharedValue(0);
 
   useEffect(() => {
-    shimmer.value = withRepeat(withTiming(1, { duration: SHIMMER_DURATION_MS, easing: Easing.linear }), -1, false);
+    shimmer.value = withRepeat(
+      withTiming(1, { duration: SHIMMER_DURATION_MS, easing: Easing.linear }),
+      -1,
+      false,
+    );
   }, [shimmer]);
 
   const shimmerStyle = useAnimatedStyle(() => ({
@@ -66,7 +70,9 @@ export function XpBar({ current, max, height = 7 }: XpBarProps) {
           }}
         >
           {fillWidth > 0 ? (
-            <Animated.View style={[{ position: "absolute", inset: 0, width: fillWidth }, shimmerStyle]}>
+            <Animated.View
+              style={[{ position: "absolute", inset: 0, width: fillWidth }, shimmerStyle]}
+            >
               <LinearGradient
                 colors={["transparent", "rgba(255,255,255,0.35)", "transparent"]}
                 start={{ x: 0, y: 0 }}

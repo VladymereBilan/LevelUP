@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Icon } from "../../components/Icon";
+import { Logo } from "../../components/Logo";
+import { Button } from "../../components/Button";
 import { signInWithGoogle } from "../../lib/auth";
-import { COLORS } from "../../lib/theme";
+import { colors } from "../../theme/tokens";
 
 export default function LoginScreen() {
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -24,68 +28,80 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.wordmark}>LEVEL UP</Text>
-      <Text style={styles.tagline}>Turn real-life habits into quests.</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View className="flex-1 items-center justify-between overflow-hidden px-6 pb-7 pt-10">
+        <View
+          className="absolute h-[260px] w-[260px] rounded-full"
+          style={{ top: 140, left: 40, borderWidth: 1, borderColor: "rgba(124,58,237,0.14)" }}
+        />
+        <View
+          className="absolute h-[188px] w-[188px] rounded-full"
+          style={{ top: 176, left: 76, borderWidth: 1, borderColor: "rgba(96,165,250,0.1)" }}
+        />
 
-      <Pressable
-        style={[styles.button, isSigningIn && styles.buttonDisabled]}
-        onPress={handlePress}
-        disabled={isSigningIn}
-      >
-        {isSigningIn ? (
-          <ActivityIndicator color={COLORS.text} />
-        ) : (
-          <Text style={styles.buttonText}>Continue with Google</Text>
-        )}
-      </Pressable>
+        <View className="mt-36 items-center">
+          <View
+            className="mb-6 h-[68px] w-[68px] items-center justify-center rounded-2xl"
+            style={{
+              transform: [{ rotate: "45deg" }],
+              borderWidth: 1,
+              borderColor: "rgba(167,139,250,0.22)",
+              backgroundColor: "rgba(124,58,237,0.14)",
+            }}
+          >
+            <View style={{ transform: [{ rotate: "-45deg" }] }}>
+              <Icon name="sparkles" size={31} color={colors.violetLight} />
+            </View>
+          </View>
+          <Logo />
+          <Text style={{ marginTop: 10, color: colors.muted, fontSize: 14, letterSpacing: 0.3 }}>
+            Turn your life into a quest
+          </Text>
+          <View className="mt-7 flex-row items-center gap-2.5">
+            <View
+              style={{ width: 38, height: 1, backgroundColor: colors.disabled, opacity: 0.4 }}
+            />
+            <Text
+              style={{ color: colors.disabled, fontSize: 8, fontWeight: "700", letterSpacing: 2.5 }}
+            >
+              BEGIN YOUR JOURNEY
+            </Text>
+            <View
+              style={{ width: 38, height: 1, backgroundColor: colors.disabled, opacity: 0.4 }}
+            />
+          </View>
+        </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-    </View>
+        <View className="w-full">
+          <Button variant="google" icon="google" onPress={handlePress} loading={isSigningIn}>
+            Continue with Google
+          </Button>
+          {error ? (
+            <Text
+              style={{ marginTop: 10, color: colors.danger, fontSize: 12, textAlign: "center" }}
+            >
+              {error}
+            </Text>
+          ) : null}
+          <Text
+            style={{
+              marginTop: 16,
+              color: colors.disabled,
+              fontSize: 9,
+              lineHeight: 14,
+              textAlign: "center",
+            }}
+          >
+            By continuing, you agree to our{" "}
+            <Text style={{ color: colors.muted, textDecorationLine: "underline" }}>Terms</Text> and
+            acknowledge our{" "}
+            <Text style={{ color: colors.muted, textDecorationLine: "underline" }}>
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-    gap: 16,
-  },
-  wordmark: {
-    color: COLORS.text,
-    fontSize: 36,
-    fontWeight: "800",
-    letterSpacing: 2,
-  },
-  tagline: {
-    color: COLORS.muted,
-    fontSize: 14,
-    marginBottom: 24,
-    textAlign: "center",
-  },
-  button: {
-    backgroundColor: COLORS.violet,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    minWidth: 220,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  error: {
-    color: COLORS.danger,
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 8,
-  },
-});

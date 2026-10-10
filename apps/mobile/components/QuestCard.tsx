@@ -22,7 +22,16 @@ const DIFFICULTY_LABEL: Record<Difficulty, string> = {
 };
 
 /** A single quest row on the Home screen's Today's Quests list. */
-export function QuestCard({ title, progressLabel, percent, xp, difficulty, icon, complete, onPress }: QuestCardProps) {
+export function QuestCard({
+  title,
+  progressLabel,
+  percent,
+  xp,
+  difficulty,
+  icon,
+  complete,
+  onPress,
+}: QuestCardProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -46,7 +55,11 @@ export function QuestCard({ title, progressLabel, percent, xp, difficulty, icon,
           marginLeft: 8,
         }}
       >
-        <Icon name={complete ? "check" : icon} size={18} color={complete ? colors.success : colors.violetLight} />
+        <Icon
+          name={complete ? "check" : icon}
+          size={18}
+          color={complete ? colors.success : colors.violetLight}
+        />
       </View>
       <View className="min-w-0 flex-1 gap-2">
         <Text
@@ -64,7 +77,10 @@ export function QuestCard({ title, progressLabel, percent, xp, difficulty, icon,
           <Text style={{ color: colors.muted, fontSize: 10 }}>{progressLabel}</Text>
           <Text style={{ color: colors.muted, fontSize: 10 }}>{percent}%</Text>
         </View>
-        <View className="h-1 overflow-hidden rounded-full" style={{ backgroundColor: "rgba(11,11,20,0.85)" }}>
+        <View
+          className="h-1 overflow-hidden rounded-full"
+          style={{ backgroundColor: "rgba(11,11,20,0.85)" }}
+        >
           <LinearGradient
             colors={gradient.colors}
             start={gradient.start}
@@ -86,7 +102,14 @@ export function QuestCard({ title, progressLabel, percent, xp, difficulty, icon,
           >
             {DIFFICULTY_LABEL[difficulty]}
           </Text>
-          <Text style={{ marginLeft: "auto", color: colors.violetLight, fontFamily: fonts.displaySemiBold, fontSize: 10 }}>
+          <Text
+            style={{
+              marginLeft: "auto",
+              color: colors.violetLight,
+              fontFamily: fonts.displaySemiBold,
+              fontSize: 10,
+            }}
+          >
             +{xp} XP
           </Text>
         </View>

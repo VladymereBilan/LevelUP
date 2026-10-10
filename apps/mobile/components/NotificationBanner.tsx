@@ -12,7 +12,14 @@ interface NotificationBannerProps {
 }
 
 /** A single notification row: icon chip, title, message, relative timestamp, and an unread dot. */
-export function NotificationBanner({ icon, iconColor, title, message, timestamp, unread }: NotificationBannerProps) {
+export function NotificationBanner({
+  icon,
+  iconColor,
+  title,
+  message,
+  timestamp,
+  unread,
+}: NotificationBannerProps) {
   return (
     <View
       className="mb-2.5 min-h-[44px] flex-row items-start gap-3 rounded-2xl border p-3.5"
@@ -26,9 +33,14 @@ export function NotificationBanner({ icon, iconColor, title, message, timestamp,
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <View className="flex-row items-center justify-between">
-          <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>{title}</Text>
+          <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>
+            {title}
+          </Text>
           {unread ? (
-            <View className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: colors.violetLight }} />
+            <View
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: colors.violetLight }}
+            />
           ) : null}
         </View>
         <Text style={{ color: colors.muted, fontSize: 10, lineHeight: 15 }}>{message}</Text>

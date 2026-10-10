@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Modal, PanResponder, Pressable, View, type LayoutChangeEvent } from "react-native";
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { colors } from "../theme/tokens";
 
 interface BottomSheetProps {
@@ -66,7 +72,11 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-      <Pressable className="flex-1" style={{ backgroundColor: "rgba(7,7,13,0.6)" }} onPress={onClose} />
+      <Pressable
+        className="flex-1"
+        style={{ backgroundColor: "rgba(7,7,13,0.6)" }}
+        onPress={onClose}
+      />
       <Animated.View
         onLayout={handleLayout}
         style={[
