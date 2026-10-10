@@ -4,17 +4,34 @@ import type { ActivityTarget, Difficulty, MetricType, QuestSource, Rank, Schedul
 import { chunkedSecureStorage } from "./secureStorage";
 
 /**
- * A minimal local view of the `profiles`/`stats`/`streaks` rows — just the
- * columns this app actually reads. Deliberately NOT imported from
- * @levelup/db: that package's own README states it's never imported from
- * apps/mobile (it also carries server-only code gated on the service-role
- * key, which must never ship in this app's bundle). Must stay in sync with
+ * A minimal local view of the tables this app reads (and, for `quests`,
+ * partially writes). Deliberately NOT imported from @levelup/db: that
+ * package's own README states it's never imported from apps/mobile (it
+ * also carries server-only code gated on the service-role key, which must
+ * never ship in this app's bundle). Must stay in sync with
  * packages/db/src/database.types.ts by hand — a read-only, types-only
  * package shared by all three (engine already plays this role for
  * game-rule types) would be a reasonable thing to extract if more tables
  * end up needed here.
+ *
+ * Every table needs Row/Insert/Update/Relationships, and `public` needs
+ * Tables/Views/Functions — postgrest-js's GenericTable/GenericSchema
+ * constraints require all of them to resolve a `.select()`'s result type
+ * at all; without them it silently resolves to `never` with no type error
+ * at the query site itself (only wherever the result is later used), which
+ * is exactly as unpleasant to debug as it sounds. `Insert` is never
+ * actually called from this app (profiles/stats/streaks/categories/
+ * activities are either server-written or client-inserted elsewhere;
+ * mobile only ever selects them), so it's a reasonable Partial<Row> rather
+ * than a fully accurate shape.
  */
 export interface MobileDatabase {
+  // Lets createClient<MobileDatabase>(...) resolve its full generic form
+  // without also needing createClient<MobileDatabase, { PostgrestVersion }>
+  // — mirrors packages/db/src/database.types.ts's generated shape.
+  __InternalSupabase: {
+    PostgrestVersion: "14.18";
+  };
   public: {
     Tables: {
       profiles: {
@@ -28,6 +45,9 @@ export interface MobileDatabase {
           timezone: string;
           created_at: string;
         };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["profiles"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["profiles"]["Row"]>;
+        Relationships: [];
       };
       stats: {
         Row: {
@@ -38,6 +58,9 @@ export interface MobileDatabase {
           int: number;
           focus: number;
         };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["stats"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["stats"]["Row"]>;
+        Relationships: [];
       };
       streaks: {
         Row: {
@@ -47,6 +70,9 @@ export interface MobileDatabase {
           last_completed_date: string | null;
           grace_days_used: number;
         };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["streaks"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["streaks"]["Row"]>;
+        Relationships: [];
       };
       categories: {
         Row: {
@@ -58,6 +84,9 @@ export interface MobileDatabase {
           stat: Stat;
           created_at: string;
         };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["categories"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["categories"]["Row"]>;
+        Relationships: [];
       };
       activities: {
         Row: {
@@ -72,6 +101,9 @@ export interface MobileDatabase {
           archived: boolean;
           created_at: string;
         };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["activities"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["activities"]["Row"]>;
+        Relationships: [];
       };
       quests: {
         Row: {
@@ -87,6 +119,7 @@ export interface MobileDatabase {
           completed_at: string | null;
           created_at: string;
         };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["quests"]["Row"]>;
         // Mirrors the DB's column-level grant: `authenticated` can only ever
         // write `progress` directly (see the RLS migration's comment on
         // `quests`) — status/result/xp side effects are server-only, via
@@ -94,8 +127,11 @@ export interface MobileDatabase {
         Update: {
           progress: number;
         };
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
   };
 }
 
