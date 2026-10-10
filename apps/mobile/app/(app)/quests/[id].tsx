@@ -6,7 +6,12 @@ import { Icon } from "../../../components/Icon";
 import { Button } from "../../../components/Button";
 import { QuestCompleteModal } from "../../../components/QuestCompleteModal";
 import { ApiError } from "../../../lib/api";
-import { loadQuestDetail, updateQuestProgress, type QuestBoardItem } from "../../../lib/questBoard";
+import {
+  invalidateQuestBoardCache,
+  loadQuestDetail,
+  updateQuestProgress,
+  type QuestBoardItem,
+} from "../../../lib/questBoard";
 import { completeQuest, type QuestCompleteResult } from "../../../lib/quests";
 import { formatProgressLabel, progressPercent } from "../../../lib/questFormat";
 import { colors, fonts, gradient } from "../../../theme/tokens";
@@ -106,21 +111,36 @@ export default function QuestDetailScreen() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    setElapsedSeconds((seconds) => {
-      const addedMinutes = Math.floor(seconds / 60);
-      if (addedMinutes > 0) {
-        persistProgress(localProgress + addedMinutes);
-      }
-      return seconds % 60;
-    });
+    const addedMinutes = Math.floor(elapsedSeconds / 60);
+    if (addedMinutes > 0) {
+      persistProgress(localProgress + addedMinutes);
+    }
+    setElapsedSeconds((seconds) => seconds % 60);
   }
 
   async function handleComplete() {
     if (!item) return;
     setCompleting(true);
     setError(null);
+
+    // The timer only flushes whole elapsed minutes into localProgress on
+    // Pause — completing while it's still running has to flush them here
+    // too, or the minutes counted since the last pause are silently lost.
+    let finalProgress = localProgress;
+    if (timerRunning) {
+      finalProgress = localProgress + Math.floor(elapsedSeconds / 60);
+      setTimerRunning(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setLocalProgress(finalProgress);
+      setElapsedSeconds((seconds) => seconds % 60);
+    }
+
     try {
-      const result = await completeQuest(item.questId, { progress: localProgress });
+      const result = await completeQuest(item.questId, { progress: finalProgress });
+      invalidateQuestBoardCache();
       setCompleteResult(result);
       setShowCompleteModal(true);
     } catch (err) {
