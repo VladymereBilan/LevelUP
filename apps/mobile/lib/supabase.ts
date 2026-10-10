@@ -1,6 +1,14 @@
 import { AppState } from "react-native";
 import { createClient } from "@supabase/supabase-js";
-import type { ActivityTarget, Difficulty, MetricType, QuestSource, Rank, Schedule, Stat } from "@levelup/engine";
+import type {
+  ActivityTarget,
+  Difficulty,
+  MetricType,
+  QuestSource,
+  Rank,
+  Schedule,
+  Stat,
+} from "@levelup/engine";
 import { chunkedSecureStorage } from "./secureStorage";
 
 /**

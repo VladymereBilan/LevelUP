@@ -26,7 +26,10 @@ interface CallResult {
   body: Record<string, unknown>;
 }
 
-async function callUsername(accessToken: string, body: Record<string, unknown>): Promise<CallResult> {
+async function callUsername(
+  accessToken: string,
+  body: Record<string, unknown>,
+): Promise<CallResult> {
   const request = new Request("http://localhost/api/onboarding/username", {
     method: "POST",
     headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },

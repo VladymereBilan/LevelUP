@@ -26,10 +26,7 @@ interface CallResult {
   body: Record<string, unknown>;
 }
 
-async function callSeed(
-  accessToken: string,
-  body: Record<string, unknown>,
-): Promise<CallResult> {
+async function callSeed(accessToken: string, body: Record<string, unknown>): Promise<CallResult> {
   const request = new Request("http://localhost/api/onboarding/seed", {
     method: "POST",
     headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },

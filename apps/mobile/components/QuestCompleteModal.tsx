@@ -28,7 +28,9 @@ export function QuestCompleteModal({ visible, result, onContinue }: QuestComplet
         }}
       >
         <View style={{ alignItems: "center", gap: 6 }}>
-          <Text style={{ color: colors.violetLight, fontSize: 10, fontWeight: "700", letterSpacing: 2 }}>
+          <Text
+            style={{ color: colors.violetLight, fontSize: 10, fontWeight: "700", letterSpacing: 2 }}
+          >
             QUEST COMPLETE
           </Text>
           <Text style={{ color: colors.text, fontFamily: fonts.displayBold, fontSize: 28 }}>
@@ -83,7 +85,9 @@ export function QuestCompleteModal({ visible, result, onContinue }: QuestComplet
         ) : null}
 
         {result.title ? (
-          <Text style={{ marginTop: 16, color: colors.violetLight, fontSize: 12, textAlign: "center" }}>
+          <Text
+            style={{ marginTop: 16, color: colors.violetLight, fontSize: 12, textAlign: "center" }}
+          >
             New title unlocked: {result.title}
           </Text>
         ) : null}

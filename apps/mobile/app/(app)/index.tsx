@@ -226,7 +226,11 @@ export default function HomeScreen() {
             <Icon
               name={questsTotal > 0 && questsCompleted === questsTotal ? "check" : "quest"}
               size={18}
-              color={questsTotal > 0 && questsCompleted === questsTotal ? colors.success : colors.violetLight}
+              color={
+                questsTotal > 0 && questsCompleted === questsTotal
+                  ? colors.success
+                  : colors.violetLight
+              }
             />
           </View>
           <View className="min-w-0 flex-1 gap-1">

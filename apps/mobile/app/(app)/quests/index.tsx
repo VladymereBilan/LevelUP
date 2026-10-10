@@ -51,7 +51,10 @@ export default function QuestsScreen() {
       setError(null);
 
       try {
-        const [board, streak] = await Promise.all([loadTodaysQuestBoard(), getMyStreak(session.user.id)]);
+        const [board, streak] = await Promise.all([
+          loadTodaysQuestBoard(),
+          getMyStreak(session.user.id),
+        ]);
         setGroups(groupByCategory(board.items));
         setStreakDays(streak.current);
       } catch (err) {
@@ -82,7 +85,12 @@ export default function QuestsScreen() {
   if (loading) {
     return (
       <SafeAreaView
-        style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
         <ActivityIndicator color={colors.violet} />
       </SafeAreaView>
@@ -101,7 +109,14 @@ export default function QuestsScreen() {
           />
         }
       >
-        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 22, marginBottom: 16 }}>
+        <Text
+          style={{
+            color: colors.text,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: 22,
+            marginBottom: 16,
+          }}
+        >
           Today&apos;s Quests
         </Text>
 
@@ -122,7 +137,8 @@ export default function QuestsScreen() {
               No quests today
             </Text>
             <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", maxWidth: 260 }}>
-              Add activities from your categories and they&apos;ll show up here on their scheduled days.
+              Add activities from your categories and they&apos;ll show up here on their scheduled
+              days.
             </Text>
           </View>
         ) : (

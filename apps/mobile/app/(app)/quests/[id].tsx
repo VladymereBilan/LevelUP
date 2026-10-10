@@ -138,7 +138,12 @@ export default function QuestDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView
-        style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
         <ActivityIndicator color={colors.violet} />
       </SafeAreaView>
@@ -148,7 +153,13 @@ export default function QuestDetailScreen() {
   if (error && !item) {
     return (
       <SafeAreaView
-        style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center", padding: 24 }}
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
       >
         <Text style={{ color: colors.danger, fontSize: 14, textAlign: "center" }}>{error}</Text>
       </SafeAreaView>
@@ -179,7 +190,9 @@ export default function QuestDetailScreen() {
         >
           <Icon name="arrow" size={16} color={colors.muted} />
         </Pressable>
-        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>{item.title}</Text>
+        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+          {item.title}
+        </Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 0, gap: 24, flexGrow: 1 }}>
@@ -195,12 +208,23 @@ export default function QuestDetailScreen() {
           }}
         >
           <View>
-            <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}>PROGRESS</Text>
-            <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15, marginTop: 4 }}>
+            <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}>
+              PROGRESS
+            </Text>
+            <Text
+              style={{
+                color: colors.text,
+                fontFamily: fonts.displaySemiBold,
+                fontSize: 15,
+                marginTop: 4,
+              }}
+            >
               {progressLabel}
             </Text>
           </View>
-          <Text style={{ color: colors.violetLight, fontFamily: fonts.displaySemiBold, fontSize: 20 }}>
+          <Text
+            style={{ color: colors.violetLight, fontFamily: fonts.displaySemiBold, fontSize: 20 }}
+          >
             {percent}%
           </Text>
         </View>
@@ -221,7 +245,11 @@ export default function QuestDetailScreen() {
               backgroundColor: localProgress >= 1 ? "rgba(34,197,94,0.1)" : "rgba(27,27,47,0.62)",
             }}
           >
-            <Icon name="check" size={28} color={localProgress >= 1 ? colors.success : colors.disabled} />
+            <Icon
+              name="check"
+              size={28}
+              color={localProgress >= 1 ? colors.success : colors.disabled}
+            />
             <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 14 }}>
               {localProgress >= 1 ? "Marked done" : "Tap to mark done"}
             </Text>
@@ -248,7 +276,8 @@ export default function QuestDetailScreen() {
           <View style={{ alignItems: "center", gap: 16, paddingVertical: 12 }}>
             {item.target.type === "sets_reps_weight" ? (
               <Text style={{ color: colors.muted, fontSize: 11 }}>
-                {item.target.reps} reps{item.target.weightKg ? ` x ${item.target.weightKg}kg` : ""} per set
+                {item.target.reps} reps{item.target.weightKg ? ` x ${item.target.weightKg}kg` : ""}{" "}
+                per set
               </Text>
             ) : null}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
@@ -267,7 +296,15 @@ export default function QuestDetailScreen() {
               >
                 <Icon name="minus" size={18} color={colors.muted} />
               </Pressable>
-              <Text style={{ color: colors.text, fontFamily: fonts.displayBold, fontSize: 32, minWidth: 60, textAlign: "center" }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displayBold,
+                  fontSize: 32,
+                  minWidth: 60,
+                  textAlign: "center",
+                }}
+              >
                 {localProgress}
               </Text>
               <Pressable
@@ -289,7 +326,14 @@ export default function QuestDetailScreen() {
           </View>
         ) : null}
 
-        <View style={{ height: 6, borderRadius: 6, overflow: "hidden", backgroundColor: "rgba(11,11,20,0.85)" }}>
+        <View
+          style={{
+            height: 6,
+            borderRadius: 6,
+            overflow: "hidden",
+            backgroundColor: "rgba(11,11,20,0.85)",
+          }}
+        >
           <LinearGradient
             colors={gradient.colors}
             start={gradient.start}
@@ -314,7 +358,9 @@ export default function QuestDetailScreen() {
                 backgroundColor: "rgba(34,197,94,0.1)",
               }}
             >
-              <Text style={{ color: colors.success, fontFamily: fonts.displaySemiBold, fontSize: 13 }}>
+              <Text
+                style={{ color: colors.success, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+              >
                 Already completed
               </Text>
             </View>
@@ -326,7 +372,11 @@ export default function QuestDetailScreen() {
         </View>
       </ScrollView>
 
-      <QuestCompleteModal visible={showCompleteModal} result={completeResult} onContinue={handleModalContinue} />
+      <QuestCompleteModal
+        visible={showCompleteModal}
+        result={completeResult}
+        onContinue={handleModalContinue}
+      />
     </SafeAreaView>
   );
 }

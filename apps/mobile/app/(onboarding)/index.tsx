@@ -144,7 +144,11 @@ export default function OnboardingScreen() {
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text
-                      style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+                      style={{
+                        color: colors.text,
+                        fontFamily: fonts.displaySemiBold,
+                        fontSize: 13,
+                      }}
                     >
                       {option.name}
                     </Text>

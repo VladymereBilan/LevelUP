@@ -40,9 +40,12 @@ Create `apps/mobile/.env.local` (gitignored — never commit this) with:
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+EXPO_PUBLIC_API_URL=<apps/web's deployed URL, e.g. https://web-nine-chi-48.vercel.app>
 ```
 
 Only the **anon** key — never the service-role key, which must never exist anywhere in this app.
+`EXPO_PUBLIC_API_URL` is apps/web's base URL — lib/api.ts calls it for every server route
+(quest generation/completion, onboarding, profile updates).
 Expo's env loading reads `.env*` files from the directory you run `expo start`/`expo export`
 from (`apps/mobile/`, not the monorepo root), so the root `.env.local` doesn't reach this app on
 its own; copy these two values in from there.

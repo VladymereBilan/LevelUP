@@ -52,7 +52,11 @@ async function refreshAccessToken(): Promise<string | null> {
   return data.session.access_token;
 }
 
-async function send(path: string, token: string | null, options: RequestOptions): Promise<Response> {
+async function send(
+  path: string,
+  token: string | null,
+  options: RequestOptions,
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
@@ -116,11 +120,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       response = await send(path, refreshedToken, options);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        throw new ApiError(
-          "timeout",
-          "Request timed out. Check your connection and try again.",
-          0,
-        );
+        throw new ApiError("timeout", "Request timed out. Check your connection and try again.", 0);
       }
       throw new ApiError("network", "Network error. Check your connection and try again.", 0);
     }

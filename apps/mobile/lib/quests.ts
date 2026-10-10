@@ -53,6 +53,9 @@ export interface CompleteQuestInput {
 }
 
 /** Idempotent — replaying on an already-completed quest returns the same stored result. */
-export function completeQuest(questId: string, input: CompleteQuestInput = {}): Promise<QuestCompleteResult> {
+export function completeQuest(
+  questId: string,
+  input: CompleteQuestInput = {},
+): Promise<QuestCompleteResult> {
   return apiFetch<QuestCompleteResult>(`/api/quests/${questId}/complete`, { body: input });
 }
