@@ -28,8 +28,9 @@ import { chunkedSecureStorage } from "./secureStorage";
  * at all; without them it silently resolves to `never` with no type error
  * at the query site itself (only wherever the result is later used), which
  * is exactly as unpleasant to debug as it sounds. `Insert`/`Update` are
- * never called for profiles/stats/streaks (server-written only), so those
- * stay a reasonable Partial<Row>. categories/activities ARE client-inserted
+ * never called for profiles/stats/streaks/xp_events/titles/user_titles
+ * (all server-written — mobile only ever selects them), so those stay a
+ * reasonable Partial<Row>. categories/activities ARE client-inserted
  * (lib/categories.ts, lib/activities.ts — RLS already grants owners full
  * CRUD on both), so their Insert/Update shapes are accurate rather than
  * Partial<Row>.
@@ -165,6 +166,41 @@ export interface MobileDatabase {
         Update: {
           progress: number;
         };
+        Relationships: [];
+      };
+      xp_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          quest_id: string | null;
+          amount: number;
+          reason: string;
+          created_at: string;
+        };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["xp_events"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["xp_events"]["Row"]>;
+        Relationships: [];
+      };
+      titles: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          unlock_rule: unknown | null;
+          created_at: string;
+        };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["titles"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["titles"]["Row"]>;
+        Relationships: [];
+      };
+      user_titles: {
+        Row: {
+          user_id: string;
+          title_id: string;
+          unlocked_at: string;
+        };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["user_titles"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["user_titles"]["Row"]>;
         Relationships: [];
       };
     };

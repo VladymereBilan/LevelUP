@@ -151,11 +151,16 @@ instructions. Google Sign-In (via a Google Cloud project) is still planned, not 
 ## Current status and known gaps
 
 Shipped so far: auth, onboarding (username + starter template), the daily quest board, quest
-completion (progress, timer, checkbox, reps/sets), streaks/XP/stats/rank, and activity
-management — creating categories/activities (`apps/mobile/lib/categories.ts`,
-`lib/activities.ts`, the `ActivityForm` component), editing and archiving an activity
-(`app/(app)/quests/activities/`), and reaching a starter template from the Quests tab's
-zero-activities empty state, not just onboarding.
+completion (progress, timer, checkbox, reps/sets), streaks/XP/stats/rank, activity management —
+creating categories/activities (`apps/mobile/lib/categories.ts`, `lib/activities.ts`, the
+`ActivityForm` component), editing and archiving an activity (`app/(app)/quests/activities/`),
+and reaching a starter template from the Quests tab's zero-activities empty state, not just
+onboarding — and the Stats tab (weekly XP bar chart, 5-stat radar chart, streak heatmap,
+titles-unlocked row; `apps/mobile/lib/statsProgress.ts`, `lib/titles.ts`,
+`components/{BarChart,RadarChart,Heatmap}.tsx`) and the Challenges tab
+(`apps/mobile/lib/challenges.ts`, `app/(app)/challenges.tsx`), backed by a new
+`GET /api/challenges` that computes each caller's own progress live rather than reading a
+persisted value (see that route's own comment for why).
 
 Known gaps, mobile:
 
@@ -168,14 +173,29 @@ Known gaps, mobile:
   pointing at it can't be deleted anyway (FK is `on delete cascade`, which would silently take
   the activities with it), so category deletion needs its own UX decision, not just a button.
 - `apps/mobile` has no test runner yet (`package.json`'s `test` script is a placeholder) — the
-  activity-management code above is covered by `pnpm typecheck`/`pnpm lint`/`expo export` and
-  manual device testing, not unit tests.
+  activity-management and Stats/Challenges code above is covered by `pnpm typecheck`/
+  `pnpm lint`/`expo export` and manual device testing, not unit tests. `GET /api/challenges`
+  itself does have real-DB tests (`apps/web/app/api/challenges/route.test.ts`).
 
-Known gaps, backend:
+Known gaps, backend/game-rules:
 
 - `packages/db`'s RLS suite (`rls.test.ts`, `rpc-privileges.test.ts`) and `apps/web`'s route
   tests that exercise real Supabase calls refuse to run against the hosted project unless
   `RLS_TEST_ALLOW_REMOTE=true` is set for that invocation (they create/delete real auth users
   and rows) — and this dev environment has no local Supabase (Docker) to point them at instead.
-  `pnpm test` therefore only fully exercises `packages/engine` here; the rest needs
-  `RLS_TEST_ALLOW_REMOTE=true pnpm test` run deliberately, or a local `supabase start`.
+  `turbo.json`'s `globalPassThroughEnv` lets plain `RLS_TEST_ALLOW_REMOTE=true pnpm test` pick
+  it up; without it, `pnpm test` only fully exercises `packages/engine` here.
+- **No title-unlocking mechanism exists.** `titles`/`user_titles` are seeded and readable
+  (`packages/db/supabase/migrations/20260310000014_seed_titles_challenges.sql`), and the Stats
+  tab displays them correctly — but nothing ever evaluates a title's `unlock_rule` and inserts
+  into `user_titles`. Every title is genuinely locked for every player until that ships (most
+  naturally as part of `complete_quest()`'s transaction, the same place streak/rank are already
+  updated).
+- **Challenge progress is computed, not persisted.** `GET /api/challenges` counts the caller's
+  own completed quests in each challenge's `[starts_at, ends_at]` window, filtered by `stat` if
+  set — correct and live, but `user_challenges` (join/progress/completion) is still entirely
+  unwritten, same as when it shipped. A future "join a challenge" flow would need its own
+  server-only writer, mirroring `complete_quest()`'s pattern.
+- **The challenge catalog doesn't rotate.** The three seeded challenges have fixed
+  `starts_at`/`ends_at` set relative to when that migration was applied — there's no admin
+  tooling yet to retire old challenges or seed new ones on a schedule.

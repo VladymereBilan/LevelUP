@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalPassThroughEnv": ["RLS_TEST_ALLOW_REMOTE"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
