@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { xpToNext, STATS } from "@levelup/engine";
 import { Icon } from "../../components/Icon";
 import { Button } from "../../components/Button";
@@ -14,12 +14,15 @@ import { useSession } from "../../lib/AuthProvider";
 import { getMyProfile, type ProfileSummary } from "../../lib/profile";
 import { getMyStats, type StatsRow } from "../../lib/stats";
 import { getMyStreak, type StreakRow } from "../../lib/streaks";
+import { loadTodaysQuestBoard } from "../../lib/questBoard";
 import { colors, fonts } from "../../theme/tokens";
 
 interface HomeData {
   profile: ProfileSummary;
   stats: StatsRow;
   streak: StreakRow;
+  questsCompleted: number;
+  questsTotal: number;
 }
 
 function initials(username: string): string {
@@ -38,36 +41,45 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!session) return;
     const currentSession = session;
 
-    let isMounted = true;
-
-    async function load() {
-      setLoading(true);
+    try {
+      const profile = await getMyProfile(currentSession.user.id);
+      const [stats, streak, board] = await Promise.all([
+        getMyStats(profile.id),
+        getMyStreak(profile.id),
+        loadTodaysQuestBoard(),
+      ]);
+      setData({
+        profile,
+        stats,
+        streak,
+        questsCompleted: board.items.filter((item) => item.status === "completed").length,
+        questsTotal: board.items.length,
+      });
       setError(null);
-
-      try {
-        const profile = await getMyProfile(currentSession.user.id);
-        const [stats, streak] = await Promise.all([
-          getMyStats(profile.id),
-          getMyStreak(profile.id),
-        ]);
-        if (isMounted) setData({ profile, stats, streak });
-      } catch (err) {
-        if (isMounted) setError(err instanceof Error ? err.message : "Failed to load your data.");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load your data.");
     }
-
-    void load();
-
-    return () => {
-      isMounted = false;
-    };
   }, [session]);
+
+  // First focus shows the full spinner; coming back here later (e.g. after
+  // completing a quest) silently revalidates instead of flashing a spinner.
+  const isFirstFocus = useRef(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      async function run() {
+        if (isFirstFocus.current) setLoading(true);
+        await load();
+        isFirstFocus.current = false;
+        setLoading(false);
+      }
+      void run();
+    }, [load]),
+  );
 
   if (loading) {
     return (
@@ -102,7 +114,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { profile, stats, streak } = data;
+  const { profile, stats, streak, questsCompleted, questsTotal } = data;
   const xpMax = xpToNext(profile.level);
   const statValues: Record<(typeof STATS)[number], number> = {
     STR: stats.str,
@@ -211,14 +223,24 @@ export default function HomeScreen() {
             className="h-[43px] w-[43px] items-center justify-center rounded-xl"
             style={{ backgroundColor: "rgba(124,58,237,0.13)" }}
           >
-            <Icon name="quest" size={18} color={colors.violetLight} />
+            <Icon
+              name={questsTotal > 0 && questsCompleted === questsTotal ? "check" : "quest"}
+              size={18}
+              color={questsTotal > 0 && questsCompleted === questsTotal ? colors.success : colors.violetLight}
+            />
           </View>
           <View className="min-w-0 flex-1 gap-1">
             <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 11 }}>
-              Your quest list lives in the Quests tab
+              {questsTotal === 0
+                ? "No quests scheduled today"
+                : `${questsCompleted} of ${questsTotal} completed`}
             </Text>
             <Text style={{ color: colors.muted, fontSize: 9 }}>
-              Open it to see and complete today&apos;s quests.
+              {questsTotal === 0
+                ? "Add activities to see quests here."
+                : questsCompleted === questsTotal
+                  ? "All done for today. Nice work."
+                  : `${questsTotal - questsCompleted} quest${questsTotal - questsCompleted === 1 ? "" : "s"} left.`}
             </Text>
           </View>
         </View>
