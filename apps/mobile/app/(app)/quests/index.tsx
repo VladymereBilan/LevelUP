@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { calcQuestXp } from "@levelup/engine";
 import { Icon } from "../../../components/Icon";
 import { QuestCard } from "../../../components/QuestCard";
@@ -9,6 +9,7 @@ import { useSession } from "../../../lib/AuthProvider";
 import { loadTodaysQuestBoard, type QuestBoardItem } from "../../../lib/questBoard";
 import { getMyStreak } from "../../../lib/streaks";
 import { formatProgressLabel, getCategoryIcon, progressPercent } from "../../../lib/questFormat";
+import { useFocusLoad, type LoadMode } from "../../../lib/useFocusLoad";
 import { colors, fonts } from "../../../theme/tokens";
 
 interface CategoryGroup {
@@ -40,14 +41,10 @@ export default function QuestsScreen() {
   const [groups, setGroups] = useState<CategoryGroup[] | null>(null);
   const [streakDays, setStreakDays] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(
-    async (mode: "initial" | "refresh" | "silent") => {
+    async (_mode: LoadMode) => {
       if (!session) return;
-      if (mode === "initial") setLoading(true);
-      if (mode === "refresh") setRefreshing(true);
       setError(null);
 
       try {
@@ -59,28 +56,12 @@ export default function QuestsScreen() {
         setStreakDays(streak.current);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load quests.");
-      } finally {
-        if (mode === "initial") setLoading(false);
-        if (mode === "refresh") setRefreshing(false);
       }
     },
     [session],
   );
 
-  // First focus shows the full spinner; returning here later (e.g. from the
-  // quest detail screen after completing one) silently revalidates instead,
-  // so the list doesn't flash a spinner every time the tab regains focus.
-  const isFirstFocus = useRef(true);
-
-  useFocusEffect(
-    useCallback(() => {
-      async function run() {
-        await load(isFirstFocus.current ? "initial" : "silent");
-        isFirstFocus.current = false;
-      }
-      void run();
-    }, [load]),
-  );
+  const { loading, refreshing, refresh } = useFocusLoad(load);
 
   if (loading) {
     return (
@@ -104,7 +85,7 @@ export default function QuestsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => void load("refresh")}
+            onRefresh={() => void refresh()}
             tintColor={colors.violet}
           />
         }
@@ -120,7 +101,7 @@ export default function QuestsScreen() {
           Today&apos;s Quests
         </Text>
 
-        {error ? (
+        {error && !groups ? (
           <View style={{ alignItems: "center", gap: 10, paddingVertical: 40 }}>
             <Icon name="quest" size={28} color={colors.danger} />
             <Text style={{ color: colors.danger, fontSize: 13, textAlign: "center" }}>{error}</Text>

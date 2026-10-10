@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { xpToNext, STATS } from "@levelup/engine";
 import { Icon } from "../../components/Icon";
 import { Button } from "../../components/Button";
@@ -15,6 +15,7 @@ import { getMyProfile, type ProfileSummary } from "../../lib/profile";
 import { getMyStats, type StatsRow } from "../../lib/stats";
 import { getMyStreak, type StreakRow } from "../../lib/streaks";
 import { loadTodaysQuestBoard } from "../../lib/questBoard";
+import { useFocusLoad } from "../../lib/useFocusLoad";
 import { colors, fonts } from "../../theme/tokens";
 
 interface HomeData {
@@ -39,7 +40,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const [data, setData] = useState<HomeData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -65,21 +65,7 @@ export default function HomeScreen() {
     }
   }, [session]);
 
-  // First focus shows the full spinner; coming back here later (e.g. after
-  // completing a quest) silently revalidates instead of flashing a spinner.
-  const isFirstFocus = useRef(true);
-
-  useFocusEffect(
-    useCallback(() => {
-      async function run() {
-        if (isFirstFocus.current) setLoading(true);
-        await load();
-        isFirstFocus.current = false;
-        setLoading(false);
-      }
-      void run();
-    }, [load]),
-  );
+  const { loading } = useFocusLoad(load);
 
   if (loading) {
     return (
@@ -96,7 +82,7 @@ export default function HomeScreen() {
     );
   }
 
-  if (error || !data) {
+  if (!data) {
     return (
       <SafeAreaView
         style={{
