@@ -2,7 +2,7 @@
   "name": "levelup",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@12.10.1",
+  "packageManager": "pnpm@10.34.6",
   "engines": {
     "node": ">=20"
   },
