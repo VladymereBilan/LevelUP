@@ -40,25 +40,29 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!session) return;
+    const currentSession = session;
 
     let isMounted = true;
-    setLoading(true);
-    setError(null);
 
-    getMyProfile(session.user.id)
-      .then(async (profile) => {
+    async function load() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const profile = await getMyProfile(currentSession.user.id);
         const [stats, streak] = await Promise.all([
           getMyStats(profile.id),
           getMyStreak(profile.id),
         ]);
         if (isMounted) setData({ profile, stats, streak });
-      })
-      .catch((err: unknown) => {
+      } catch (err) {
         if (isMounted) setError(err instanceof Error ? err.message : "Failed to load your data.");
-      })
-      .finally(() => {
+      } finally {
         if (isMounted) setLoading(false);
-      });
+      }
+    }
+
+    void load();
 
     return () => {
       isMounted = false;

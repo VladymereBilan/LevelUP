@@ -9,6 +9,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { colors } from "../theme/tokens";
 
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/immutability, react-hooks/refs --
+   this component's whole job is synchronizing with two external, imperative systems: Reanimated's
+   SharedValue (mutating `.value` is its documented API, not React state) and RN's PanResponder
+   (its own docs recommend `useRef(PanResponder.create(...)).current`). eslint-plugin-react-hooks
+   v7's React-Compiler-oriented rules don't yet recognize either as a safe escape hatch. */
+
 interface BottomSheetProps {
   visible: boolean;
   onClose: () => void;

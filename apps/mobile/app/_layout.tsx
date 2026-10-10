@@ -52,6 +52,10 @@ function RootLayoutNav() {
       <Stack.Protected guard={!session}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
+      {/* Reachable regardless of session state: right after the OAuth
+          redirect, the session may still be settling. Only rendered if
+          +native-intent's redirect didn't already intercept the path. */}
+      <Stack.Screen name="auth/callback" />
     </Stack>
   );
 }
