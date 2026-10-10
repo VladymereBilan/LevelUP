@@ -1,6 +1,6 @@
 import { AppState } from "react-native";
 import { createClient } from "@supabase/supabase-js";
-import type { Rank } from "@levelup/engine";
+import type { ActivityTarget, Difficulty, MetricType, QuestSource, Rank, Schedule, Stat } from "@levelup/engine";
 import { chunkedSecureStorage } from "./secureStorage";
 
 /**
@@ -46,6 +46,53 @@ export interface MobileDatabase {
           longest: number;
           last_completed_date: string | null;
           grace_days_used: number;
+        };
+      };
+      categories: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          color: string;
+          icon: string;
+          stat: Stat;
+          created_at: string;
+        };
+      };
+      activities: {
+        Row: {
+          id: string;
+          category_id: string;
+          user_id: string;
+          name: string;
+          metric_type: MetricType;
+          target_value: ActivityTarget;
+          schedule: Schedule;
+          difficulty: Difficulty;
+          archived: boolean;
+          created_at: string;
+        };
+      };
+      quests: {
+        Row: {
+          id: string;
+          user_id: string;
+          activity_id: string;
+          date: string;
+          target: ActivityTarget;
+          progress: number;
+          status: "pending" | "completed" | "skipped";
+          source: QuestSource | null;
+          result: unknown | null;
+          completed_at: string | null;
+          created_at: string;
+        };
+        // Mirrors the DB's column-level grant: `authenticated` can only ever
+        // write `progress` directly (see the RLS migration's comment on
+        // `quests`) — status/result/xp side effects are server-only, via
+        // POST /api/quests/[id]/complete.
+        Update: {
+          progress: number;
         };
       };
     };

@@ -1,4 +1,5 @@
 import { supabase, type MobileDatabase } from "./supabase";
+import { apiFetch } from "./api";
 
 export type ProfileSummary = MobileDatabase["public"]["Tables"]["profiles"]["Row"];
 
@@ -35,4 +36,9 @@ export async function getMyProfile(userId: string): Promise<ProfileSummary> {
   }
 
   throw lastError;
+}
+
+/** Sets the signed-in user's IANA timezone, read from the device. Safe to call on every sign-in. */
+export async function setTimezone(timezone: string): Promise<void> {
+  await apiFetch<{ timezone: string }>("/api/profile/timezone", { body: { timezone } });
 }
