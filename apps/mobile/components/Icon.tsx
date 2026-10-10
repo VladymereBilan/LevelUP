@@ -16,6 +16,7 @@ export type IconName =
   | "google"
   | "home"
   | "logout"
+  | "minus"
   | "moon"
   | "plus"
   | "pause"
@@ -82,6 +83,7 @@ const ICON_ELEMENTS: Record<IconName, IconElement[]> = {
     { type: "path", d: "M5 9v11h14V9M9 20v-6h6v6" },
   ],
   logout: [{ type: "path", d: "M10 5H5v14h5M14 8l4 4-4 4M8 12h10" }],
+  minus: [{ type: "path", d: "M5 12h14" }],
   moon: [{ type: "path", d: "M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" }],
   plus: [{ type: "path", d: "M12 5v14M5 12h14" }],
   pause: [{ type: "path", d: "M9 5v14M15 5v14" }],

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { calcQuestXp } from "@levelup/engine";
 import { Icon } from "../../../components/Icon";
 import { QuestCard } from "../../../components/QuestCard";
@@ -44,10 +44,10 @@ export default function QuestsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(
-    async (opts: { isRefresh: boolean }) => {
+    async (mode: "initial" | "refresh" | "silent") => {
       if (!session) return;
-      if (opts.isRefresh) setRefreshing(true);
-      else setLoading(true);
+      if (mode === "initial") setLoading(true);
+      if (mode === "refresh") setRefreshing(true);
       setError(null);
 
       try {
@@ -57,19 +57,27 @@ export default function QuestsScreen() {
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load quests.");
       } finally {
-        if (opts.isRefresh) setRefreshing(false);
-        else setLoading(false);
+        if (mode === "initial") setLoading(false);
+        if (mode === "refresh") setRefreshing(false);
       }
     },
     [session],
   );
 
-  useEffect(() => {
-    async function run() {
-      await load({ isRefresh: false });
-    }
-    void run();
-  }, [load]);
+  // First focus shows the full spinner; returning here later (e.g. from the
+  // quest detail screen after completing one) silently revalidates instead,
+  // so the list doesn't flash a spinner every time the tab regains focus.
+  const isFirstFocus = useRef(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      async function run() {
+        await load(isFirstFocus.current ? "initial" : "silent");
+        isFirstFocus.current = false;
+      }
+      void run();
+    }, [load]),
+  );
 
   if (loading) {
     return (
@@ -88,7 +96,7 @@ export default function QuestsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => void load({ isRefresh: true })}
+            onRefresh={() => void load("refresh")}
             tintColor={colors.violet}
           />
         }
