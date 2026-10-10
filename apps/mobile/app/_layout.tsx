@@ -15,6 +15,7 @@ import {
   SpaceGrotesk_700Bold,
 } from "@expo-google-fonts/space-grotesk";
 import { AuthProvider, useSession } from "../lib/AuthProvider";
+import { OnboardingProvider, useOnboarding } from "../lib/OnboardingProvider";
 import { colors } from "../theme/tokens";
 
 function LoadingScreen() {
@@ -34,8 +35,9 @@ function LoadingScreen() {
 
 function RootLayoutNav() {
   const { session, loading } = useSession();
+  const { status } = useOnboarding();
 
-  if (loading) {
+  if (loading || (session && status === "loading")) {
     return <LoadingScreen />;
   }
 
@@ -46,8 +48,11 @@ function RootLayoutNav() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Protected guard={!!session}>
+      <Stack.Protected guard={!!session && status === "ready"}>
         <Stack.Screen name="(app)" />
+      </Stack.Protected>
+      <Stack.Protected guard={!!session && status === "needs-onboarding"}>
+        <Stack.Screen name="(onboarding)" />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="(auth)" />
@@ -77,8 +82,10 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <StatusBar style="light" />
-      <RootLayoutNav />
+      <OnboardingProvider>
+        <StatusBar style="light" />
+        <RootLayoutNav />
+      </OnboardingProvider>
     </AuthProvider>
   );
 }
