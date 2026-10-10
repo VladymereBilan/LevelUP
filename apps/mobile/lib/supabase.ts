@@ -28,10 +28,10 @@ import { chunkedSecureStorage } from "./secureStorage";
  * at all; without them it silently resolves to `never` with no type error
  * at the query site itself (only wherever the result is later used), which
  * is exactly as unpleasant to debug as it sounds. `Insert` is never
- * actually called from this app (profiles/stats/streaks/categories/
- * activities are either server-written or client-inserted elsewhere;
- * mobile only ever selects them), so it's a reasonable Partial<Row> rather
- * than a fully accurate shape.
+ * actually called from this app for any table below (profiles/stats/
+ * streaks/categories/activities/xp_events/titles/user_titles are all
+ * server-written — mobile only ever selects them), so it's a reasonable
+ * Partial<Row> rather than a fully accurate shape.
  */
 export interface MobileDatabase {
   // Lets createClient<MobileDatabase>(...) resolve its full generic form
@@ -135,6 +135,41 @@ export interface MobileDatabase {
         Update: {
           progress: number;
         };
+        Relationships: [];
+      };
+      xp_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          quest_id: string | null;
+          amount: number;
+          reason: string;
+          created_at: string;
+        };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["xp_events"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["xp_events"]["Row"]>;
+        Relationships: [];
+      };
+      titles: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          unlock_rule: unknown | null;
+          created_at: string;
+        };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["titles"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["titles"]["Row"]>;
+        Relationships: [];
+      };
+      user_titles: {
+        Row: {
+          user_id: string;
+          title_id: string;
+          unlocked_at: string;
+        };
+        Insert: Partial<MobileDatabase["public"]["Tables"]["user_titles"]["Row"]>;
+        Update: Partial<MobileDatabase["public"]["Tables"]["user_titles"]["Row"]>;
         Relationships: [];
       };
     };

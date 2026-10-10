@@ -8,7 +8,7 @@ interface StatBarProps {
   value: number;
 }
 
-const STAT_ICONS: Record<Stat, IconName> = {
+export const STAT_ICONS: Record<Stat, IconName> = {
   STR: "dumbbell",
   AGI: "sparkles",
   VIT: "shield",
