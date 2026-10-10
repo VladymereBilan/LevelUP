@@ -147,3 +147,40 @@ syntax-validated offline (via `libpg_query`/`pglast`), not run. Run `npx supabas
 `npx supabase db reset` from `packages/db` before trusting it beyond local dev — see
 `packages/db/README.md` for the full local-dev, type-regeneration, seeding, and RLS-test-running
 instructions. Google Sign-In (via a Google Cloud project) is still planned, not yet implemented.
+
+## Current status and known gaps
+
+Shipped so far: auth, onboarding, the daily quest board, quest completion (progress, timer,
+checkbox, reps/sets), streaks/XP/stats/rank, and — this round — the Stats tab (weekly XP bar
+chart, 5-stat radar chart, streak heatmap, titles-unlocked row; `apps/mobile/lib/statsProgress.ts`,
+`lib/titles.ts`, `components/{BarChart,RadarChart,Heatmap}.tsx`) and the Challenges tab
+(`apps/mobile/lib/challenges.ts`, `app/(app)/challenges.tsx`), backed by a new
+`GET /api/challenges` that computes each caller's own progress live rather than reading a
+persisted value (see that route's own comment for why).
+
+Known gaps, mobile:
+
+- `apps/mobile/app/(app)/quests/[id].tsx`: `item.progress` is set into `localProgress` once on
+  load and never kept in sync with it afterward. Currently harmless (nothing reads the stale
+  value again), but worth fixing properly if that screen is touched again.
+- `apps/mobile` has no test runner yet (`package.json`'s `test` script is a placeholder) — the
+  Stats/Challenges data layer above is covered by `pnpm typecheck`/`pnpm lint`/`expo export` and
+  manual device testing, not unit tests. `GET /api/challenges` itself does have real-DB tests
+  (`apps/web/app/api/challenges/route.test.ts`).
+
+Known gaps, backend/game-rules:
+
+- **No title-unlocking mechanism exists.** `titles`/`user_titles` are seeded and readable
+  (`packages/db/supabase/migrations/20260310000014_seed_titles_challenges.sql`), and the Stats
+  tab displays them correctly — but nothing ever evaluates a title's `unlock_rule` and inserts
+  into `user_titles`. Every title is genuinely locked for every player until that ships (most
+  naturally as part of `complete_quest()`'s transaction, the same place streak/rank are already
+  updated).
+- **Challenge progress is computed, not persisted.** `GET /api/challenges` counts the caller's
+  own completed quests in each challenge's `[starts_at, ends_at]` window, filtered by `stat` if
+  set — correct and live, but `user_challenges` (join/progress/completion) is still entirely
+  unwritten, same as when it shipped. A future "join a challenge" flow would need its own
+  server-only writer, mirroring `complete_quest()`'s pattern.
+- **The challenge catalog doesn't rotate.** The three seeded challenges have fixed
+  `starts_at`/`ends_at` set relative to when that migration was applied — there's no admin
+  tooling yet to retire old challenges or seed new ones on a schedule.
