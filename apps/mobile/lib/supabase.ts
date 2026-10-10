@@ -27,11 +27,12 @@ import { chunkedSecureStorage } from "./secureStorage";
  * constraints require all of them to resolve a `.select()`'s result type
  * at all; without them it silently resolves to `never` with no type error
  * at the query site itself (only wherever the result is later used), which
- * is exactly as unpleasant to debug as it sounds. `Insert` is never
- * actually called from this app (profiles/stats/streaks/categories/
- * activities are either server-written or client-inserted elsewhere;
- * mobile only ever selects them), so it's a reasonable Partial<Row> rather
- * than a fully accurate shape.
+ * is exactly as unpleasant to debug as it sounds. `Insert`/`Update` are
+ * never called for profiles/stats/streaks (server-written only), so those
+ * stay a reasonable Partial<Row>. categories/activities ARE client-inserted
+ * (lib/categories.ts, lib/activities.ts — RLS already grants owners full
+ * CRUD on both), so their Insert/Update shapes are accurate rather than
+ * Partial<Row>.
  */
 export interface MobileDatabase {
   // Lets createClient<MobileDatabase>(...) resolve its full generic form
@@ -92,7 +93,16 @@ export interface MobileDatabase {
           stat: Stat;
           created_at: string;
         };
-        Insert: Partial<MobileDatabase["public"]["Tables"]["categories"]["Row"]>;
+        Insert: {
+          user_id: string;
+          name: string;
+          color: string;
+          icon: string;
+          stat: Stat;
+        };
+        // Category edits aren't part of this app yet — only creation
+        // (lib/categories.ts). Kept as a full partial so it's ready when
+        // that's needed, rather than an empty type that'd need revisiting.
         Update: Partial<MobileDatabase["public"]["Tables"]["categories"]["Row"]>;
         Relationships: [];
       };
@@ -109,8 +119,28 @@ export interface MobileDatabase {
           archived: boolean;
           created_at: string;
         };
-        Insert: Partial<MobileDatabase["public"]["Tables"]["activities"]["Row"]>;
-        Update: Partial<MobileDatabase["public"]["Tables"]["activities"]["Row"]>;
+        Insert: {
+          category_id: string;
+          user_id: string;
+          name: string;
+          metric_type: MetricType;
+          target_value: ActivityTarget;
+          schedule: Schedule;
+          difficulty: Difficulty;
+        };
+        // Mirrors what lib/activities.ts's editing/archiving actually
+        // updates — never id/user_id/created_at (and category ownership is
+        // re-validated by the check_activity_category_owner trigger if
+        // category_id does change).
+        Update: Partial<{
+          category_id: string;
+          name: string;
+          metric_type: MetricType;
+          target_value: ActivityTarget;
+          schedule: Schedule;
+          difficulty: Difficulty;
+          archived: boolean;
+        }>;
         Relationships: [];
       };
       quests: {
