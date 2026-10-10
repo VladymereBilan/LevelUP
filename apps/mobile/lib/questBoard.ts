@@ -24,13 +24,49 @@ export interface QuestBoard {
   items: QuestBoardItem[];
 }
 
-/**
- * Ensures today's quests exist (generateQuests is idempotent), then joins
+// Home and the Quests tab each call loadTodaysQuestBoard() on every focus
+// (see their useFocusLoad usage), so bouncing between tabs can fire several
+// calls within a couple of seconds — each one a round trip to the
+// rate-limited /api/quests/generate endpoint (5 requests/60s). A short
+// cache collapses those into one real request; invalidateQuestBoardCache()
+// (called after any write that changes quest state) keeps it from ever
+// serving stale data to a caller that just made a change.
+const BOARD_CACHE_MS = 5000;
+let cachedBoard: QuestBoard | null = null;
+let cachedAt = 0;
+let inFlightBoard: Promise<QuestBoard> | null = null;
+
+export function invalidateQuestBoardCache(): void {
+  cachedBoard = null;
+  inFlightBoard = null;
+}
+
+/** Ensures today's quests exist (generateQuests is idempotent), then joins
  * them with their activity and category for display — quests/activities/
  * categories are three separate client-readable tables (no FK-embed typing
- * in this app's hand-authored MobileDatabase), so this joins them in JS.
- */
-export async function loadTodaysQuestBoard(): Promise<QuestBoard> {
+ * in this app's hand-authored MobileDatabase), so this joins them in JS. */
+export function loadTodaysQuestBoard(): Promise<QuestBoard> {
+  if (cachedBoard && Date.now() - cachedAt < BOARD_CACHE_MS) {
+    return Promise.resolve(cachedBoard);
+  }
+  if (inFlightBoard) return inFlightBoard;
+
+  inFlightBoard = fetchTodaysQuestBoard().then(
+    (board) => {
+      cachedBoard = board;
+      cachedAt = Date.now();
+      inFlightBoard = null;
+      return board;
+    },
+    (err: unknown) => {
+      inFlightBoard = null;
+      throw err;
+    },
+  );
+  return inFlightBoard;
+}
+
+async function fetchTodaysQuestBoard(): Promise<QuestBoard> {
   const { date, quests } = await generateQuests();
   if (quests.length === 0) {
     return { date, items: [] };
@@ -133,4 +169,5 @@ export async function loadQuestDetail(questId: string): Promise<QuestBoardItem |
 export async function updateQuestProgress(questId: string, progress: number): Promise<void> {
   const { error } = await supabase.from("quests").update({ progress }).eq("id", questId);
   if (error) throw new Error(error.message);
+  invalidateQuestBoardCache();
 }
