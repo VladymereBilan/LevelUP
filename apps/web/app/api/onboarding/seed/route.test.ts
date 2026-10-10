@@ -100,4 +100,41 @@ describe.skipIf(!configured)("POST /api/onboarding/seed", () => {
     expect(status).toBe(400);
     expect(body.error).toBeTypeOf("string");
   });
+
+  it("is idempotent: a second call doesn't duplicate categories/activities", async () => {
+    const a = await newUser("seed-idempotent");
+
+    const first = await callSeed(a.accessToken, { templateId: "tmpl-gym-starter" });
+    expect(first.status).toBe(200);
+    expect(first.body).toEqual({ seeded: true, templateId: "tmpl-gym-starter" });
+
+    const second = await callSeed(a.accessToken, { templateId: "tmpl-gym-starter" });
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual({ seeded: false, templateId: "tmpl-gym-starter" });
+
+    const { data: categories } = await admin
+      .from("categories")
+      .select("id")
+      .eq("user_id", a.user.id);
+    expect(categories).toHaveLength(3);
+
+    const { data: activities } = await admin
+      .from("activities")
+      .select("id")
+      .eq("user_id", a.user.id);
+    expect(activities).toHaveLength(4);
+  });
+
+  it("returns 401 without a bearer token", async () => {
+    const request = new Request("http://localhost/api/onboarding/seed", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ templateId: null }),
+    });
+    const response = await POST(request);
+    const body = (await response.json()) as Record<string, unknown>;
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBeTypeOf("string");
+  });
 });

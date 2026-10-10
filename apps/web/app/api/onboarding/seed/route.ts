@@ -15,6 +15,12 @@ const KNOWN_TEMPLATE_IDS = new Set(STARTER_TEMPLATES.map((t) => t.id));
  * malicious client can't fabricate `templateId`-shaped data claiming to be
  * one of the curated starter sets, and so this stays rate-limited the same
  * way every other write-triggering route is.
+ *
+ * Idempotent: categories has no unique constraint on (user_id, name), so
+ * seedStarterTemplate() itself would happily insert duplicates on a second
+ * call. Onboarding is meant to run once (the mobile client only shows it
+ * while the user has zero categories), so a repeat call — a double-tap, a
+ * network retry — is a no-op rather than a duplicate seed.
  */
 export async function POST(request: Request): Promise<Response> {
   const auth = await authenticate(request);
@@ -40,6 +46,17 @@ export async function POST(request: Request): Promise<Response> {
       { error: `Unknown templateId. Known templates: ${known}` },
       { status: 400 },
     );
+  }
+
+  const { count, error: countError } = await supabase
+    .from("categories")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (countError) {
+    return Response.json({ error: countError.message }, { status: 500 });
+  }
+  if ((count ?? 0) > 0) {
+    return Response.json({ seeded: false, templateId }, { status: 200 });
   }
 
   try {

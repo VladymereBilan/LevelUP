@@ -1,0 +1,18 @@
+-- xp_events_no_delete (added in 20260310000005) blocks any DELETE on
+-- xp_events, including the one Postgres runs when CASCADE-deleting a
+-- user's xp_events rows as part of deleting their profiles row (itself
+-- cascading from deleting the auth.users row). That's not ledger
+-- tampering — the account and everything in it is going away together —
+-- but the trigger can't distinguish that from a client trying to erase
+-- history, so it blocks the cascade too: auth.admin.deleteUser() (or any
+-- full-account deletion) fails with "Database error deleting user", and
+-- every real-DB test that calls complete_quest() silently leaks its test
+-- user on cleanup (confirmed: 20 leftover test-* auth users accumulated
+-- across repeated runs of complete/route.test.ts before this fix).
+--
+-- Dropping just the delete guard, keeping xp_events_no_update: tampering
+-- with amounts/reasons on a live ledger is still blocked; full-account
+-- deletion — the only way xp_events rows are ever removed, since there's
+-- no client DELETE grant on this table at all (see the RLS migration) —
+-- is not.
+drop trigger xp_events_no_delete on public.xp_events;

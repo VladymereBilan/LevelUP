@@ -83,4 +83,17 @@ describe.skipIf(!configured)("POST /api/profile/timezone", () => {
     expect(status).toBe(400);
     expect(body.error).toBeTypeOf("string");
   });
+
+  it("returns 401 without a bearer token", async () => {
+    const request = new Request("http://localhost/api/profile/timezone", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ timezone: "Asia/Manila" }),
+    });
+    const response = await POST(request);
+    const body = (await response.json()) as Record<string, unknown>;
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBeTypeOf("string");
+  });
 });

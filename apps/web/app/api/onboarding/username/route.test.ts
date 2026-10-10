@@ -96,4 +96,17 @@ describe.skipIf(!configured)("POST /api/onboarding/username", () => {
     const second = await callUsername(b.accessToken, { username: name.toUpperCase() });
     expect(second.status).toBe(409);
   });
+
+  it("returns 401 without a bearer token", async () => {
+    const request = new Request("http://localhost/api/onboarding/username", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: "NoToken" }),
+    });
+    const response = await POST(request);
+    const body = (await response.json()) as Record<string, unknown>;
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBeTypeOf("string");
+  });
 });
