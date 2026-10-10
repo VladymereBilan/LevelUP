@@ -26,10 +26,7 @@ interface CallResult {
   body: Record<string, unknown>;
 }
 
-async function callEquip(
-  accessToken: string,
-  body: Record<string, unknown>,
-): Promise<CallResult> {
+async function callEquip(accessToken: string, body: Record<string, unknown>): Promise<CallResult> {
   const request = new Request("http://localhost/api/profile/title", {
     method: "POST",
     headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
@@ -69,7 +66,10 @@ describe.skipIf(!configured)("POST /api/profile/title", () => {
   async function newTitle(label: string): Promise<string> {
     const { data, error } = await admin
       .from("titles")
-      .insert({ name: `Test ${label} ${crypto.randomUUID()}`, unlock_rule: { type: "level", value: 999 } })
+      .insert({
+        name: `Test ${label} ${crypto.randomUUID()}`,
+        unlock_rule: { type: "level", value: 999 },
+      })
       .select("id")
       .single();
     if (error || !data) throw new Error(`Failed to insert test title: ${error?.message}`);
@@ -78,7 +78,9 @@ describe.skipIf(!configured)("POST /api/profile/title", () => {
   }
 
   async function grantTitle(userId: string, titleId: string): Promise<void> {
-    const { error } = await admin.from("user_titles").insert({ user_id: userId, title_id: titleId });
+    const { error } = await admin
+      .from("user_titles")
+      .insert({ user_id: userId, title_id: titleId });
     if (error) throw new Error(`Failed to grant test title: ${error.message}`);
   }
 

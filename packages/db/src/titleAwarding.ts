@@ -89,8 +89,7 @@ export async function computeNewlyUnlockedTitles(
   if (titlesResult.error) throw new Error(titlesResult.error.message);
   if (userTitlesResult.error) throw new Error(userTitlesResult.error.message);
 
-  const totalXp =
-    (xpResult.data ?? []).reduce((sum, row) => sum + row.amount, 0) + (extra.xp ?? 0);
+  const totalXp = (xpResult.data ?? []).reduce((sum, row) => sum + row.amount, 0) + (extra.xp ?? 0);
 
   const questsCompletedByStat = { ...breakdown.completedByStat };
   let totalQuestsCompleted = breakdown.totalCompleted;

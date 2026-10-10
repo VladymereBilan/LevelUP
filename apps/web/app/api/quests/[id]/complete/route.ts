@@ -186,7 +186,12 @@ export async function POST(
     titlesUnlocked = await computeNewlyUnlockedTitles(
       supabase,
       userId,
-      { level: awardResult.progress.level, rank: newRank, longestStreak: newStreak.longest, stats: newStats },
+      {
+        level: awardResult.progress.level,
+        rank: newRank,
+        longestStreak: newStreak.longest,
+        stats: newStats,
+      },
       { xp: xpAwarded, completedQuestStat: stat },
     );
   } catch (err) {

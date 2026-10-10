@@ -97,7 +97,7 @@ pnpm --filter @levelup/db backfill-titles <userId>
 ```
 
 Titles are only ever awarded as a side effect of `complete_quest()` — there's no scheduled job
-re-checking everyone's progress. This evaluates one user's *current* profile/stats/streak
+re-checking everyone's progress. This evaluates one user's _current_ profile/stats/streak
 against the titles catalog and awards anything newly satisfied, for progress made before title
 awarding existed (or before a new title was added to the catalog). Safe to re-run: it's a
 no-op for a user with nothing new to award.
@@ -172,11 +172,11 @@ always on for you. A fresh clone with no `.env.local` at all still skips cleanly
 
 ## Functions
 
-| Function                                                            | Caller              | Purpose                                                                                                                                                                                                           |
-| ------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Function                                                            | Caller              | Purpose                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `complete_quest(...)`                                               | `service_role` only | Atomic completion writer — quest status + `xp_events` + `profiles` + `stats` + `streaks` + `user_titles` in one transaction. Re-validates ownership/status and locks the quest row even though the route handler already checked. Which titles to award (if any) is computed by the route via `@levelup/db`'s `computeNewlyUnlockedTitles` and passed in as `p_titles_unlocked`. |
-| `generate_daily_quests(user_id, date)`                              | `service_role` only | Creates pending quests from active (non-archived) activities whose schedule matches `date`. Idempotent via `ON CONFLICT DO NOTHING` on the quests unique constraint.                                              |
-| `check_rate_limit(user_id, endpoint, max_requests, window_seconds)` | `service_role` only | Self-cleaning fixed-window-lookback rate limiter backed by `rate_limit_hits`.                                                                                                                                     |
+| `generate_daily_quests(user_id, date)`                              | `service_role` only | Creates pending quests from active (non-archived) activities whose schedule matches `date`. Idempotent via `ON CONFLICT DO NOTHING` on the quests unique constraint.                                                                                                                                                                                                             |
+| `check_rate_limit(user_id, endpoint, max_requests, window_seconds)` | `service_role` only | Self-cleaning fixed-window-lookback rate limiter backed by `rate_limit_hits`.                                                                                                                                                                                                                                                                                                    |
 
 All three `set search_path = ''` and fully qualify every reference, per standard `SECURITY
 DEFINER` hardening guidance (an unqualified name inside a definer function resolves against

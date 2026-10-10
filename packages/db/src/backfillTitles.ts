@@ -61,7 +61,9 @@ export async function backfillTitlesForUser(userId: string): Promise<BackfillRes
       { onConflict: "user_id,title_id", ignoreDuplicates: true },
     );
     if (insertError) {
-      throw new Error(`Failed to award backfilled titles for user ${userId}: ${insertError.message}`);
+      throw new Error(
+        `Failed to award backfilled titles for user ${userId}: ${insertError.message}`,
+      );
     }
   }
 
