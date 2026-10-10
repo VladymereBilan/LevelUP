@@ -5,7 +5,12 @@ import { Icon, type IconName } from "../../components/Icon";
 import { Button } from "../../components/Button";
 import { Logo } from "../../components/Logo";
 import { ApiError } from "../../lib/api";
-import { setUsername, seedStarterTemplate, type StarterTemplateId } from "../../lib/onboarding";
+import {
+  setUsername,
+  seedStarterTemplate,
+  STARTER_TEMPLATE_OPTIONS,
+  type StarterTemplateId,
+} from "../../lib/onboarding";
 import { useOnboarding } from "../../lib/OnboardingProvider";
 import { colors, fonts } from "../../theme/tokens";
 
@@ -19,18 +24,7 @@ interface TemplateOption {
 }
 
 const TEMPLATE_OPTIONS: TemplateOption[] = [
-  {
-    id: "tmpl-gym-starter",
-    name: "Gym Starter",
-    description: "Strength, cardio, and recovery quests.",
-    icon: "dumbbell",
-  },
-  {
-    id: "tmpl-student",
-    name: "Student",
-    description: "Study blocks and deep focus quests.",
-    icon: "book",
-  },
+  ...STARTER_TEMPLATE_OPTIONS,
   {
     id: null,
     name: "Start from scratch",

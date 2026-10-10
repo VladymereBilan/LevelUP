@@ -43,7 +43,9 @@ export function progressPercent(
 
 /** @levelup/engine's starter templates (packages/engine/src/templates.ts) use a handful of
  * icon names that don't have a 1:1 match in this app's Icon set — aliased to the closest
- * existing icon, matching how the same stat is iconified elsewhere (e.g. StatBar). */
+ * existing icon, matching how the same stat is iconified elsewhere (e.g. StatBar). Entries
+ * below that key by their own name (e.g. "flame": "flame") are the options offered by the
+ * new-category icon picker (see CATEGORY_ICON_OPTIONS) — identity so they render as chosen. */
 const CATEGORY_ICON_ALIASES: Record<string, IconName> = {
   dumbbell: "dumbbell",
   book: "book",
@@ -51,8 +53,50 @@ const CATEGORY_ICON_ALIASES: Record<string, IconName> = {
   run: "sparkles",
   target: "focus",
   heart: "shield",
+  flame: "flame",
+  shield: "shield",
+  sparkles: "sparkles",
+  focus: "focus",
+  trophy: "trophy",
+  stats: "stats",
+  code: "code",
+  calendar: "calendar",
+  bell: "bell",
 };
 
 export function getCategoryIcon(icon: string): IconName {
   return CATEGORY_ICON_ALIASES[icon] ?? "sparkles";
 }
+
+/** Offered by the new-category icon picker (Add Activity screen). Each is a real IconName
+ * stored verbatim as categories.icon, so CATEGORY_ICON_ALIASES above resolves it by identity. */
+export const CATEGORY_ICON_OPTIONS: readonly IconName[] = [
+  "dumbbell",
+  "book",
+  "moon",
+  "flame",
+  "shield",
+  "sparkles",
+  "focus",
+  "trophy",
+  "stats",
+  "code",
+  "calendar",
+  "bell",
+];
+
+/** Swatches offered by the new-category color picker — the app's own accent/stat palette,
+ * not an arbitrary wheel, so user-created categories stay visually consistent with the rest
+ * of the UI (theme/tokens.ts's colors and toneColors). */
+export const CATEGORY_COLOR_OPTIONS: readonly string[] = [
+  "#7C3AED",
+  "#3B82F6",
+  "#22C55E",
+  "#F59E0B",
+  "#EF4444",
+  "#A78BFA",
+  "#60A5FA",
+  "#4ADE80",
+  "#FBBF24",
+  "#F87171",
+];

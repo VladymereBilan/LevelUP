@@ -147,3 +147,35 @@ syntax-validated offline (via `libpg_query`/`pglast`), not run. Run `npx supabas
 `npx supabase db reset` from `packages/db` before trusting it beyond local dev — see
 `packages/db/README.md` for the full local-dev, type-regeneration, seeding, and RLS-test-running
 instructions. Google Sign-In (via a Google Cloud project) is still planned, not yet implemented.
+
+## Current status and known gaps
+
+Shipped so far: auth, onboarding (username + starter template), the daily quest board, quest
+completion (progress, timer, checkbox, reps/sets), streaks/XP/stats/rank, and activity
+management — creating categories/activities (`apps/mobile/lib/categories.ts`,
+`lib/activities.ts`, the `ActivityForm` component), editing and archiving an activity
+(`app/(app)/quests/activities/`), and reaching a starter template from the Quests tab's
+zero-activities empty state, not just onboarding.
+
+Known gaps, mobile:
+
+- `apps/mobile/app/(app)/quests/[id].tsx`: `item.progress` is set into `localProgress` once on
+  load and never kept in sync with it afterward. Currently harmless — nothing reads the stale
+  `item.progress` value again after that first read — but worth fixing properly (or removing
+  the now-pointless field) if this screen is touched again.
+- Categories can be created (inline, while adding an activity) but not edited or deleted from
+  the app yet — only activities have an edit/archive screen. A category with activities still
+  pointing at it can't be deleted anyway (FK is `on delete cascade`, which would silently take
+  the activities with it), so category deletion needs its own UX decision, not just a button.
+- `apps/mobile` has no test runner yet (`package.json`'s `test` script is a placeholder) — the
+  activity-management code above is covered by `pnpm typecheck`/`pnpm lint`/`expo export` and
+  manual device testing, not unit tests.
+
+Known gaps, backend:
+
+- `packages/db`'s RLS suite (`rls.test.ts`, `rpc-privileges.test.ts`) and `apps/web`'s route
+  tests that exercise real Supabase calls refuse to run against the hosted project unless
+  `RLS_TEST_ALLOW_REMOTE=true` is set for that invocation (they create/delete real auth users
+  and rows) — and this dev environment has no local Supabase (Docker) to point them at instead.
+  `pnpm test` therefore only fully exercises `packages/engine` here; the rest needs
+  `RLS_TEST_ALLOW_REMOTE=true pnpm test` run deliberately, or a local `supabase start`.

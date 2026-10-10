@@ -1,12 +1,25 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { calcQuestXp } from "@levelup/engine";
+import { Button } from "../../../components/Button";
 import { Icon } from "../../../components/Icon";
 import { QuestCard } from "../../../components/QuestCard";
+import { ApiError } from "../../../lib/api";
+import { countMyActivities } from "../../../lib/activities";
 import { useSession } from "../../../lib/AuthProvider";
-import { loadTodaysQuestBoard, type QuestBoardItem } from "../../../lib/questBoard";
+import {
+  STARTER_TEMPLATE_OPTIONS,
+  seedStarterTemplate,
+  type StarterTemplateId,
+} from "../../../lib/onboarding";
+import {
+  invalidateQuestBoardCache,
+  loadTodaysQuestBoard,
+  type QuestBoardItem,
+} from "../../../lib/questBoard";
+import { generateQuests } from "../../../lib/quests";
 import { getMyStreak } from "../../../lib/streaks";
 import { formatProgressLabel, getCategoryIcon, progressPercent } from "../../../lib/questFormat";
 import { useFocusLoad, type LoadMode } from "../../../lib/useFocusLoad";
@@ -40,7 +53,9 @@ export default function QuestsScreen() {
   const router = useRouter();
   const [groups, setGroups] = useState<CategoryGroup[] | null>(null);
   const [streakDays, setStreakDays] = useState(0);
+  const [hasAnyActivities, setHasAnyActivities] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [seedingTemplate, setSeedingTemplate] = useState<string | null>(null);
 
   const load = useCallback(
     async (_mode: LoadMode) => {
@@ -48,12 +63,14 @@ export default function QuestsScreen() {
       setError(null);
 
       try {
-        const [board, streak] = await Promise.all([
+        const [board, streak, activityCount] = await Promise.all([
           loadTodaysQuestBoard(),
           getMyStreak(session.user.id),
+          countMyActivities(session.user.id),
         ]);
         setGroups(groupByCategory(board.items));
         setStreakDays(streak.current);
+        setHasAnyActivities(activityCount > 0);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load quests.");
       }
@@ -62,6 +79,21 @@ export default function QuestsScreen() {
   );
 
   const { loading, refreshing, refresh } = useFocusLoad(load);
+
+  async function handleChooseTemplate(templateId: StarterTemplateId) {
+    setSeedingTemplate(templateId);
+    setError(null);
+    try {
+      await seedStarterTemplate(templateId);
+      invalidateQuestBoardCache();
+      await generateQuests().catch(() => {});
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to set up that template.");
+    } finally {
+      setSeedingTemplate(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -90,21 +122,99 @@ export default function QuestsScreen() {
           />
         }
       >
-        <Text
+        <View
           style={{
-            color: colors.text,
-            fontFamily: fonts.displaySemiBold,
-            fontSize: 22,
+            flexDirection: "row",
+            alignItems: "center",
             marginBottom: 16,
           }}
         >
-          Today&apos;s Quests
-        </Text>
+          <Text
+            style={{
+              flex: 1,
+              color: colors.text,
+              fontFamily: fonts.displaySemiBold,
+              fontSize: 22,
+            }}
+          >
+            Today&apos;s Quests
+          </Text>
+          <Pressable
+            onPress={() => router.push("/quests/activities")}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: colors.border,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 8,
+            }}
+          >
+            <Icon name="edit" size={15} color={colors.muted} />
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/quests/activities/new")}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: "rgba(167,139,250,0.35)",
+              backgroundColor: "rgba(124,58,237,0.14)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Icon name="plus" size={16} color={colors.violetLight} />
+          </Pressable>
+        </View>
 
         {error && !groups ? (
           <View style={{ alignItems: "center", gap: 10, paddingVertical: 40 }}>
             <Icon name="quest" size={28} color={colors.danger} />
             <Text style={{ color: colors.danger, fontSize: 13, textAlign: "center" }}>{error}</Text>
+          </View>
+        ) : !hasAnyActivities && (!groups || groups.length === 0) ? (
+          <View style={{ alignItems: "center", gap: 14, paddingVertical: 48 }}>
+            <View
+              className="h-14 w-14 items-center justify-center rounded-2xl"
+              style={{ backgroundColor: "rgba(124,58,237,0.14)" }}
+            >
+              <Icon name="quest" size={24} color={colors.violetLight} />
+            </View>
+            <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+              No activities yet
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", maxWidth: 260 }}>
+              Choose a template to start with ready-made quests, or build your own.
+            </Text>
+            {error ? (
+              <Text style={{ color: colors.danger, fontSize: 11, textAlign: "center" }}>{error}</Text>
+            ) : null}
+            <View style={{ width: "100%", gap: 10, marginTop: 6 }}>
+              {STARTER_TEMPLATE_OPTIONS.map((template) => (
+                <Button
+                  key={template.id}
+                  variant="secondary"
+                  icon={template.icon}
+                  loading={seedingTemplate === template.id}
+                  disabled={seedingTemplate !== null}
+                  onPress={() => void handleChooseTemplate(template.id)}
+                >
+                  {template.name}
+                </Button>
+              ))}
+              <Button
+                variant="ghost"
+                icon="plus"
+                disabled={seedingTemplate !== null}
+                onPress={() => router.push("/quests/activities/new")}
+              >
+                Add your own activity
+              </Button>
+            </View>
           </View>
         ) : !groups || groups.length === 0 ? (
           <View style={{ alignItems: "center", gap: 10, paddingVertical: 60 }}>
@@ -118,8 +228,7 @@ export default function QuestsScreen() {
               No quests today
             </Text>
             <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", maxWidth: 260 }}>
-              Add activities from your categories and they&apos;ll show up here on their scheduled
-              days.
+              Nothing scheduled for today. Add another activity, or check back tomorrow.
             </Text>
           </View>
         ) : (
