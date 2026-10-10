@@ -160,7 +160,15 @@ titles-unlocked row; `apps/mobile/lib/statsProgress.ts`, `lib/titles.ts`,
 `components/{BarChart,RadarChart,Heatmap}.tsx`) and the Challenges tab
 (`apps/mobile/lib/challenges.ts`, `app/(app)/challenges.tsx`), backed by a new
 `GET /api/challenges` that computes each caller's own progress live rather than reading a
-persisted value (see that route's own comment for why).
+persisted value (see that route's own comment for why) — and title awarding: titles unlock
+automatically inside `complete_quest()`'s transaction (which titles to award is computed by
+the completion route via `@levelup/engine`'s `evaluateTitleRules` and `@levelup/db`'s
+`computeNewlyUnlockedTitles`, same "engine decides, the DB function just writes" pattern as
+everything else complete_quest does), surfaced in the completion response as
+`titlesUnlocked` and shown in the level-up modal; equipping a title
+(`POST /api/profile/title`, ownership-validated) is shown on Home under the hunter name.
+`pnpm --filter @levelup/db backfill-titles <userId>` retroactively awards titles for progress
+made before this shipped.
 
 Known gaps, mobile:
 
@@ -185,12 +193,10 @@ Known gaps, backend/game-rules:
   and rows) — and this dev environment has no local Supabase (Docker) to point them at instead.
   `turbo.json`'s `globalPassThroughEnv` lets plain `RLS_TEST_ALLOW_REMOTE=true pnpm test` pick
   it up; without it, `pnpm test` only fully exercises `packages/engine` here.
-- **No title-unlocking mechanism exists.** `titles`/`user_titles` are seeded and readable
-  (`packages/db/supabase/migrations/20260310000014_seed_titles_challenges.sql`), and the Stats
-  tab displays them correctly — but nothing ever evaluates a title's `unlock_rule` and inserts
-  into `user_titles`. Every title is genuinely locked for every player until that ships (most
-  naturally as part of `complete_quest()`'s transaction, the same place streak/rank are already
-  updated).
+- **No title-unlocking mechanism evaluates existing titles automatically on a schedule** —
+  only on quest completion (`complete_quest()`) or a manual backfill run. A title added to the
+  catalog after a player already qualifies for it needs `backfill-titles` run for them (or
+  their next completion) before it shows as unlocked; there's no cron re-checking everyone.
 - **Challenge progress is computed, not persisted.** `GET /api/challenges` counts the caller's
   own completed quests in each challenge's `[starts_at, ends_at]` window, filtered by `stat` if
   set — correct and live, but `user_challenges` (join/progress/completion) is still entirely
