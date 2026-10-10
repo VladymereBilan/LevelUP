@@ -15,6 +15,7 @@ import { getMyProfile, type ProfileSummary } from "../../lib/profile";
 import { getMyStats, type StatsRow } from "../../lib/stats";
 import { getMyStreak, type StreakRow } from "../../lib/streaks";
 import { loadTodaysQuestBoard } from "../../lib/questBoard";
+import { listMyTitles } from "../../lib/titles";
 import { useFocusLoad } from "../../lib/useFocusLoad";
 import { colors, fonts } from "../../theme/tokens";
 
@@ -24,6 +25,7 @@ interface HomeData {
   streak: StreakRow;
   questsCompleted: number;
   questsTotal: number;
+  equippedTitleName: string | null;
 }
 
 function initials(username: string): string {
@@ -47,10 +49,11 @@ export default function HomeScreen() {
 
     try {
       const profile = await getMyProfile(currentSession.user.id);
-      const [stats, streak, board] = await Promise.all([
+      const [stats, streak, board, titles] = await Promise.all([
         getMyStats(profile.id),
         getMyStreak(profile.id),
         loadTodaysQuestBoard(),
+        listMyTitles(profile.id),
       ]);
       setData({
         profile,
@@ -58,6 +61,7 @@ export default function HomeScreen() {
         streak,
         questsCompleted: board.items.filter((item) => item.status === "completed").length,
         questsTotal: board.items.length,
+        equippedTitleName: titles.find((title) => title.id === profile.title_id)?.name ?? null,
       });
       setError(null);
     } catch (err) {
@@ -100,7 +104,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { profile, stats, streak, questsCompleted, questsTotal } = data;
+  const { profile, stats, streak, questsCompleted, questsTotal, equippedTitleName } = data;
   const xpMax = xpToNext(profile.level);
   const statValues: Record<(typeof STATS)[number], number> = {
     STR: stats.str,
@@ -136,6 +140,9 @@ export default function HomeScreen() {
               <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
                 {profile.username}
               </Text>
+              {equippedTitleName ? (
+                <Text style={{ color: colors.violetLight, fontSize: 9 }}>{equippedTitleName}</Text>
+              ) : null}
             </View>
           </View>
           <StreakChip days={streak.current} />

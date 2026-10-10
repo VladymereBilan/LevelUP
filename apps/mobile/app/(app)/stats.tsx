@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BarChart } from "../../components/BarChart";
 import { Heatmap } from "../../components/Heatmap";
@@ -7,17 +7,14 @@ import { Icon } from "../../components/Icon";
 import { RadarChart } from "../../components/RadarChart";
 import { RankChip } from "../../components/RankChip";
 import { StreakChip } from "../../components/StreakChip";
+import { TitleDetailModal } from "../../components/TitleDetailModal";
+import { ApiError } from "../../lib/api";
 import { useSession } from "../../lib/AuthProvider";
-import { getMyProfile, type ProfileSummary } from "../../lib/profile";
+import { equipTitle, getMyProfile, type ProfileSummary } from "../../lib/profile";
 import { getLifetimeTotals, getStreakHeatmap, getWeeklyXpSummary } from "../../lib/statsProgress";
 import { getMyStats, type StatsRow } from "../../lib/stats";
 import { getMyStreak, type StreakRow } from "../../lib/streaks";
-import {
-  describeTitleUnlockRule,
-  listMyTitles,
-  titleIcon,
-  type TitleDisplay,
-} from "../../lib/titles";
+import { listMyTitles, titleIcon, type TitleDisplay } from "../../lib/titles";
 import { useFocusLoad } from "../../lib/useFocusLoad";
 import { colors, fonts } from "../../theme/tokens";
 
@@ -38,6 +35,9 @@ export default function StatsScreen() {
   const { session } = useSession();
   const [data, setData] = useState<StatsData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTitle, setSelectedTitle] = useState<TitleDisplay | null>(null);
+  const [equipSubmitting, setEquipSubmitting] = useState(false);
+  const [equipError, setEquipError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -73,6 +73,21 @@ export default function StatsScreen() {
   }, [session]);
 
   const { loading, refreshing, refresh } = useFocusLoad(load);
+
+  async function handleEquip(titleId: string | null) {
+    if (!data) return;
+    setEquipSubmitting(true);
+    setEquipError(null);
+    try {
+      await equipTitle(titleId);
+      setData({ ...data, profile: { ...data.profile, title_id: titleId } });
+      setSelectedTitle(null);
+    } catch (err) {
+      setEquipError(err instanceof ApiError ? err.message : "Failed to update your title.");
+    } finally {
+      setEquipSubmitting(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -296,43 +311,63 @@ export default function StatsScreen() {
             {unlockedCount} of {data.titles.length}
           </Text>
         </View>
+        {equipError ? (
+          <Text style={{ color: colors.danger, fontSize: 11, textAlign: "center" }}>
+            {equipError}
+          </Text>
+        ) : null}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-          {data.titles.map((title) => (
-            <View
-              key={title.id}
-              style={{
-                width: "47%",
-                padding: 12,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: "rgba(27,27,47,0.62)",
-                gap: 6,
-                opacity: title.unlocked ? 1 : 0.55,
-              }}
-            >
-              <View
+          {data.titles.map((title) => {
+            const equipped = title.id === data.profile.title_id;
+            return (
+              <Pressable
+                key={title.id}
+                onPress={() => setSelectedTitle(title)}
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "rgba(124,58,237,0.14)",
+                  width: "47%",
+                  padding: 12,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: equipped ? "rgba(167,139,250,0.55)" : colors.border,
+                  backgroundColor: equipped ? "rgba(124,58,237,0.14)" : "rgba(27,27,47,0.62)",
+                  gap: 6,
+                  opacity: title.unlocked ? 1 : 0.55,
                 }}
               >
-                <Icon name={titleIcon(title.unlockRule)} size={15} color={colors.violetLight} />
-              </View>
-              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 12 }}>
-                {title.name}
-              </Text>
-              <Text style={{ color: colors.muted, fontSize: 9 }}>
-                {title.unlocked ? "Unlocked" : describeTitleUnlockRule(title.unlockRule)}
-              </Text>
-            </View>
-          ))}
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "rgba(124,58,237,0.14)",
+                  }}
+                >
+                  <Icon name={titleIcon(title.unlockRule)} size={15} color={colors.violetLight} />
+                </View>
+                <Text
+                  style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 12 }}
+                >
+                  {title.name}
+                </Text>
+                <Text style={{ color: colors.muted, fontSize: 9 }}>
+                  {equipped ? "Equipped" : title.unlocked ? "Unlocked" : "Locked"}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </ScrollView>
+
+      <TitleDetailModal
+        title={selectedTitle}
+        isEquipped={selectedTitle !== null && selectedTitle.id === data.profile.title_id}
+        submitting={equipSubmitting}
+        onEquip={() => selectedTitle && void handleEquip(selectedTitle.id)}
+        onUnequip={() => void handleEquip(null)}
+        onClose={() => setSelectedTitle(null)}
+      />
     </SafeAreaView>
   );
 }
