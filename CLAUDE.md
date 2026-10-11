@@ -205,3 +205,21 @@ Known gaps, backend/game-rules:
 - **The challenge catalog doesn't rotate.** The three seeded challenges have fixed
   `starts_at`/`ends_at` set relative to when that migration was applied — there's no admin
   tooling yet to retire old challenges or seed new ones on a schedule.
+
+## Roadmap
+
+Not yet started, roughly in priority order:
+
+1. **Notifications and streak reminders** — push/local notifications nudging a player before
+   their streak would lapse. No notification infrastructure exists yet in `apps/mobile`.
+2. **Health Connect and GPS run tracking** — richer quest completion sourced from Android
+   Health Connect and device GPS (e.g. a tracked run), rather than today's
+   manual/checkbox/timer-only completion flow.
+3. **Production readiness**: the app's own branding (icon/splash, replacing Expo's defaults),
+   a privacy-policy page in `apps/web`, and a separate production Supabase project — today
+   there's only the one hosted project, which both serves the app and is the target of the
+   RLS/integration test suites above.
+4. **Mobile type/test infra**: replace the hand-authored `MobileDatabase` type
+   (`apps/mobile/lib/supabase.ts`) with Supabase-generated types, the same way `packages/db`
+   already generates its own (see `packages/db/README.md`), and give `apps/mobile` a real test
+   runner — today's `test` script is a placeholder (see "Known gaps, mobile" above).
