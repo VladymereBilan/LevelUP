@@ -16,6 +16,18 @@ name: Database backup
 # "Install PostgreSQL client" step asks the server what version it is first, then installs that
 # exact major from the official PGDG apt repository (Ubuntu's own repos only ever carry one,
 # often older, major).
+#
+# Passphrase handling: both the encrypt and decrypt/verify steps feed BACKUP_GPG_PASSPHRASE to
+# gpg the same way — `printf '%s' "$BACKUP_GPG_PASSPHRASE" | gpg --pinentry-mode loopback
+# --passphrase-fd 0 ...` — rather than `--passphrase "$VAR"` on the command line. `--decrypt`
+# always negotiates the passphrase through gpg-agent's pinentry protocol (even for a
+# symmetric-passphrase message), and without `--pinentry-mode loopback` the agent rejects a
+# client-supplied `--passphrase` and tries to launch an interactive pinentry program instead —
+# which doesn't exist on a headless runner, so decryption fails immediately. `--symmetric`
+# encryption doesn't need the agent at all, which is why the encrypt step worked even without
+# this flag while decrypt/verify didn't. `--passphrase-fd 0` (fed via `printf '%s'`, which adds
+# no trailing newline) also keeps the passphrase out of the process list (`ps`/`/proc`), unlike
+# passing it as a `--passphrase` argument.
 
 on:
   schedule:
@@ -89,11 +101,21 @@ jobs:
             exit 1
           fi
           stamp=$(date -u +%Y%m%d-%H%M%S)
+          dump_file="dump-${stamp}.dump"
+          encrypted_file="backup-${stamp}.dump.gpg"
+
+          # pg_dump writes to a file (not a pipe) so gpg's stdin is free for the
+          # passphrase — see the file-header comment on why --passphrase-fd 0.
           "$PG_DUMP_BIN" "$PROD_DATABASE_URL" --no-owner --no-privileges --format=custom \
-            | gpg --batch --yes --symmetric --cipher-algo AES256 \
-                  --passphrase "$BACKUP_GPG_PASSPHRASE" \
-                  --output "backup-${stamp}.dump.gpg"
-          echo "BACKUP_FILE=backup-${stamp}.dump.gpg" >> "$GITHUB_ENV"
+            --file "$dump_file"
+
+          printf '%s' "$BACKUP_GPG_PASSPHRASE" \
+            | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+                  --symmetric --cipher-algo AES256 \
+                  --output "$encrypted_file" "$dump_file"
+
+          rm -f "$dump_file"
+          echo "BACKUP_FILE=${encrypted_file}" >> "$GITHUB_ENV"
 
       - name: Upload encrypted backup
         uses: actions/upload-artifact@v4
@@ -113,18 +135,35 @@ jobs:
             exit 1
           fi
 
-          # Confirm the passphrase actually decrypts it and the plaintext starts
-          # with pg_dump custom-format's magic header — without ever printing
-          # the decrypted content itself.
-          header=$(
-            gpg --batch --yes --decrypt --passphrase "$BACKUP_GPG_PASSPHRASE" "${BACKUP_FILE}" \
-              2>/tmp/gpg_err | head -c 5
-          ) || {
-            echo "::error::Failed to decrypt the encrypted backup artifact for verification."
+          decrypted_file="$(mktemp)"
+          trap 'rm -f "$decrypted_file"' EXIT
+
+          # Same passphrase-delivery mechanism as the encrypt step (see the
+          # file-header comment) — decrypt to a temp file, never to stdout, so
+          # nothing of the plaintext content ever reaches the job log.
+          set +e
+          printf '%s' "$BACKUP_GPG_PASSPHRASE" \
+            | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+                  --output "$decrypted_file" --decrypt "${BACKUP_FILE}" \
+                  2>/tmp/gpg_err
+          gpg_exit=$?
+          set -e
+
+          if [ "$gpg_exit" -ne 0 ]; then
+            echo "::error::gpg failed to decrypt the backup artifact (exit code ${gpg_exit})."
+            gpg --version | head -n1
             exit 1
-          }
+          fi
+
+          if [ ! -s "$decrypted_file" ]; then
+            echo "::error::Decrypted backup is empty."
+            exit 1
+          fi
+
+          header=$(head -c 5 "$decrypted_file")
           if [ "$header" != "PGDMP" ]; then
             echo "::error::Decrypted backup does not start with the expected pg_dump header."
             exit 1
           fi
+
           echo "Encrypted backup verified: non-empty, decrypts, and has the expected pg_dump header."
