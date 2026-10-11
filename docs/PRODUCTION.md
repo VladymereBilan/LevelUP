@@ -113,17 +113,35 @@ pg_restore --no-owner --no-privileges --clean --if-exists \
 
 Do this periodically (e.g. quarterly) against a **local Supabase instance**, never against
 production directly, to confirm backups are actually restorable before you ever need one for
-real:
+real. `packages/db/scripts/restore-test.ps1` (Windows) automates all of the steps above —
+decrypt, start the local instance if needed, restore into a throwaway scratch database, print
+row counts, clean up:
 
-- [ ] `npx supabase start` (from `packages/db`) for a clean local instance
-- [ ] Download the most recent backup artifact and decrypt it per above
-- [ ] `pg_restore` into the local instance's connection string
-- [ ] `npx supabase db diff` (or spot-check key tables) to confirm the schema matches what's
-      expected — a backup that doesn't actually restore is worse than no backup, because it
-      creates false confidence
-- [ ] Spot-check row counts against what the backup was taken from (roughly — the audit script
-      pattern in `packages/db` is reusable for this: read-only counts per table, service role)
+```powershell
+# from the repo root, with a downloaded backup-*.dump.gpg artifact:
+packages\db\scripts\restore-test.ps1 -BackupPath C:\path\to\backup-20260101-070000.dump.gpg
+```
+
+It prompts for the GPG passphrase interactively (never as an argument, never logged), refuses to
+run against anything but the local Supabase instance (mirroring
+`packages/db/src/host.ts`'s `isLocalSupabaseHost`), restores using the `pg_restore` *inside* the
+local Supabase Postgres container (so the version always matches — see the backup workflow's own
+version-matching fix for why that matters), and drops the scratch database afterward unless
+`-KeepDatabase` is passed. It needs Git for Windows on `PATH` (for a working `gpg` — see the
+script's own comments for why `gpg.exe` is invoked through `bash.exe` rather than directly) and
+Docker Desktop running.
+
+- [ ] Download the most recent backup artifact
+- [ ] Run `restore-test.ps1 -BackupPath <downloaded file>` — note the printed row counts
+- [ ] Row counts look plausible for what the backup was taken from (the script already refuses
+      to report success if any of `profiles`/`quests`/`xp_events`/`titles`/`challenges` couldn't
+      be counted after restore — a backup that doesn't actually restore is worse than no backup,
+      because it creates false confidence)
 - [ ] Record the date and result somewhere durable (this doc's revision history, or an issue)
+
+On a non-Windows machine, or to inspect the restored data further (`-KeepDatabase`), do it by
+hand per "Restoring from a backup" above, then `npx supabase db diff` (or spot-check key tables)
+to confirm the schema matches what's expected.
 
 ## Go-live checklist
 
