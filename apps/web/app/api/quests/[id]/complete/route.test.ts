@@ -18,11 +18,9 @@ import { POST } from "./route";
  * test it against a mock. Same skip/fail policy as every other real-DB
  * suite — see packages/db/src/testing.ts.
  *
- * To actually run it:
- *   Local:  npx supabase start (from packages/db — requires Docker), then
- *           npx supabase db reset, then pnpm --filter @levelup/web test
- *   Hosted: set SUPABASE_URL/SUPABASE_ANON_KEY/SUPABASE_SERVICE_ROLE_KEY,
- *           set RLS_TEST_ALLOW_REMOTE=true, then pnpm --filter @levelup/web test
+ * To actually run it: npx supabase start (from packages/db — requires Docker), then
+ * npx supabase db reset, then pnpm --filter @levelup/web test. There is no hosted
+ * option — the hosted project is PRODUCTION (see packages/db/src/testing.ts).
  */
 
 const TEST_FILE_LABEL = "complete/route.test.ts";

@@ -1,19 +1,23 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
+import { isLocalSupabaseHost } from "./host";
 
 /**
  * Shared environment-gating for every test suite that runs against a real
- * Supabase (local or hosted) rather than mocks — there's no way to verify
- * RLS, a server-only RPC's privileges, or a route handler's DB writes short
- * of a real Postgres + PostgREST.
+ * Supabase (local only — see host.ts) rather than mocks — there's no way to
+ * verify RLS, a server-only RPC's privileges, or a route handler's DB
+ * writes short of a real Postgres + PostgREST.
  *
  * The policy every caller of this module follows: SKIP only when
  * SUPABASE_URL isn't set at all (a genuinely unconfigured environment).
- * Once a URL is configured, any problem — host unreachable, a rejected key,
- * a missing RLS_TEST_ALLOW_REMOTE opt-in for a non-local host — is a test
- * FAILURE, not a quiet skip: a configured-but-broken setup is worth
- * surfacing loudly. See each call site's file-level comment for the exact
- * commands to run it.
+ * Once a URL is configured, any problem — a non-local host, host
+ * unreachable, a rejected key — is a test FAILURE, not a quiet skip: a
+ * configured-but-broken setup is worth surfacing loudly. The hosted project
+ * is PRODUCTION (see CLAUDE.md and docs/PRODUCTION.md) — these suites
+ * create/delete real auth users and rows, so there is no opt-in flag to run
+ * them against it; point SUPABASE_URL at a local Supabase instead
+ * (`npx supabase start` from packages/db). See each call site's file-level
+ * comment for the exact commands to run it.
  */
 
 export const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
@@ -37,35 +41,31 @@ export function warnSkippingSupabaseTests(testFileLabel: string): void {
   console.warn(
     `[${testFileLabel}] Skipping: no SUPABASE_URL configured. ` +
       `Missing/empty env var(s): ${missingSupabaseEnvVarNames().join(", ")}. Values are never logged. ` +
-      "Point these at a local (`npx supabase start`) or hosted Supabase project, then re-run. " +
-      "See packages/db/README.md.",
+      "Point these at a local Supabase instance (`npx supabase start` from packages/db), then " +
+      "re-run. See packages/db/README.md.",
   );
 }
 
-function isLocalHost(hostname: string): boolean {
-  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
-}
-
 /**
- * Validates the environment is actually usable — the remote-host opt-in,
- * network reachability, and both keys — then returns a ready service-role
- * client. Throws (test FAILURE) on any problem; see the file-level comment
- * above for why that's the right behavior once a URL is configured.
+ * Validates the environment is actually usable — local host, network
+ * reachability, and both keys — then returns a ready service-role client.
+ * Throws (test FAILURE) on any problem; see the file-level comment above
+ * for why that's the right behavior once a URL is configured.
  */
 export async function createVerifiedServiceRoleClient(
   testFileLabel: string,
 ): Promise<SupabaseClient<Database>> {
   const host = new URL(SUPABASE_URL).host;
-  const hostname = new URL(SUPABASE_URL).hostname;
-  // Printed before anything else — including before the remote-host guard
-  // — so it's visible no matter how this ends.
+  // Printed before anything else — including before the local-host guard —
+  // so it's visible no matter how this ends.
   console.log(`[${testFileLabel}] Supabase host: ${host}`);
 
-  if (!isLocalHost(hostname) && process.env.RLS_TEST_ALLOW_REMOTE !== "true") {
+  if (!isLocalSupabaseHost(SUPABASE_URL)) {
     throw new Error(
-      `Refusing to run against non-local host "${host}" without RLS_TEST_ALLOW_REMOTE=true. ` +
-        "This suite creates/deletes real auth users and rows. Set RLS_TEST_ALLOW_REMOTE=true " +
-        "only if you intend to run it against this project.",
+      `Refusing to run against non-local host "${host}". This suite creates/deletes real auth ` +
+        "users and rows, and the hosted project is PRODUCTION — there is no opt-in flag to run " +
+        "it there. Point SUPABASE_URL at a local Supabase instead: `npx supabase start` from " +
+        "packages/db. See packages/db/README.md.",
     );
   }
 

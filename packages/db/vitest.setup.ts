@@ -7,8 +7,9 @@ import { fileURLToPath } from "node:url";
  * vitest runs — mirrors apps/web/vitest.setup.ts exactly, so both packages
  * behave the same way when a developer has a configured .env.local:
  * `pnpm test` will pick it up and attempt the real-DB suites, which then
- * require RLS_TEST_ALLOW_REMOTE=true for any non-local host rather than
- * silently skipping. Existing process.env values always win.
+ * require SUPABASE_URL to point at a local Supabase instance — see
+ * testing.ts for why there's no flag to point them at the hosted project.
+ * Existing process.env values always win.
  */
 function loadEnvFile(path: string): void {
   if (!existsSync(path)) return;

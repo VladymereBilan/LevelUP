@@ -16,12 +16,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * (`supabase start`) or a hosted project both work. See ../testing.ts for
  * the skip/fail policy this (and every other real-DB suite) follows.
  *
- * To actually run it:
- *   Local:  npx supabase start (from packages/db — requires Docker), then
- *           npx supabase db reset, then pnpm --filter @levelup/db test:rls
- *   Hosted: set SUPABASE_URL/SUPABASE_ANON_KEY/SUPABASE_SERVICE_ROLE_KEY to
- *           the project's values, set RLS_TEST_ALLOW_REMOTE=true, then
- *           pnpm --filter @levelup/db test:rls
+ * To actually run it: npx supabase start (from packages/db — requires Docker), then
+ * npx supabase db reset, then pnpm --filter @levelup/db test:rls. There is no hosted
+ * option — the hosted project is PRODUCTION (see testing.ts).
  */
 
 const TEST_FILE_LABEL = "rls.test.ts";

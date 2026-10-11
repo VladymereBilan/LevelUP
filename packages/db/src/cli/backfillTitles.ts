@@ -1,4 +1,5 @@
 import { backfillTitlesForUser } from "../backfillTitles";
+import { assertScriptMayRun } from "../scriptGuard";
 
 const [userId] = process.argv.slice(2);
 
@@ -6,6 +7,8 @@ if (!userId) {
   console.error("Usage: pnpm --filter @levelup/db backfill-titles <userId>");
   process.exit(1);
 }
+
+assertScriptMayRun("backfill-titles");
 
 backfillTitlesForUser(userId)
   .then((result) => {
