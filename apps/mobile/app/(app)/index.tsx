@@ -15,6 +15,7 @@ import { getMyProfile, type ProfileSummary } from "../../lib/profile";
 import { getMyStats, type StatsRow } from "../../lib/stats";
 import { getMyStreak, type StreakRow } from "../../lib/streaks";
 import { loadTodaysQuestBoard } from "../../lib/questBoard";
+import { initials } from "../../lib/questFormat";
 import { listMyTitles } from "../../lib/titles";
 import { useFocusLoad } from "../../lib/useFocusLoad";
 import { colors, fonts } from "../../theme/tokens";
@@ -26,15 +27,6 @@ interface HomeData {
   questsCompleted: number;
   questsTotal: number;
   equippedTitleName: string | null;
-}
-
-function initials(username: string): string {
-  const letters = username
-    .trim()
-    .split(/\s+/)
-    .map((part) => part[0])
-    .filter((letter): letter is string => Boolean(letter));
-  return (letters.slice(0, 2).join("") || username.slice(0, 2)).toUpperCase();
 }
 
 export default function HomeScreen() {

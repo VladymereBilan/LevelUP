@@ -1,6 +1,17 @@
 import type { ActivityTarget, MetricType } from "@levelup/engine";
 import type { IconName } from "../components/Icon";
 
+/** Up to 2 letters for an avatar — first letter of each word in a multi-word username, or
+ * the first 2 characters of a single-word one. */
+export function initials(username: string): string {
+  const letters = username
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .filter((letter): letter is string => Boolean(letter));
+  return (letters.slice(0, 2).join("") || username.slice(0, 2)).toUpperCase();
+}
+
 export function formatProgressLabel(
   metricType: MetricType,
   progress: number,

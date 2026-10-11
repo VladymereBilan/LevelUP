@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Icon } from "../../../components/Icon";
-import { Stepper } from "../../../components/Stepper";
+import { RankChip } from "../../../components/RankChip";
+import { SettingsCard, SettingsNavRow, SettingsToggleRow } from "../../../components/SettingsCard";
 import { Button } from "../../../components/Button";
+import { useSession } from "../../../lib/AuthProvider";
 import { signOut } from "../../../lib/auth";
 import {
   ensureNotificationChannel,
@@ -14,85 +16,94 @@ import {
   setNotificationPrefs,
   type NotificationPrefs,
 } from "../../../lib/notifications";
-import { colors, fonts } from "../../../theme/tokens";
+import { getMyProfile, type ProfileSummary } from "../../../lib/profile";
+import { initials } from "../../../lib/questFormat";
+import { getRankHistory, type RankHistoryEntry } from "../../../lib/rankHistory";
+import { getLifetimeTotals } from "../../../lib/statsProgress";
+import { getMyStreak, type StreakRow } from "../../../lib/streaks";
+import { listMyTitles, titleIcon, type TitleDisplay } from "../../../lib/titles";
+import { useFocusLoad } from "../../../lib/useFocusLoad";
+import { colors, fonts, rankLabels } from "../../../theme/tokens";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
-function sectionLabel(text: string) {
-  return (
-    <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.2 }}>
-      {text}
-    </Text>
-  );
+interface ProfileData {
+  profile: ProfileSummary;
+  streak: StreakRow;
+  totalXp: number;
+  questsDone: number;
+  equippedTitle: TitleDisplay | null;
+  rankHistory: RankHistoryEntry[];
 }
 
-function card(children: React.ReactNode) {
-  return (
-    <View
-      style={{
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: "rgba(27,27,47,0.62)",
-        padding: 16,
-        gap: 14,
-      }}
-    >
-      {children}
-    </View>
-  );
+function formatJoinedDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date(iso));
 }
 
-function toggleRow(label: string, value: boolean, onChange: (next: boolean) => void) {
+function formatShortDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit" }).format(new Date(iso));
+}
+
+function sectionHeader(label: string, trailing?: React.ReactNode) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-      <Text style={{ color: colors.text, fontSize: 13, fontFamily: fonts.bodyMedium, flex: 1 }}>
+      <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.2 }}>
         {label}
       </Text>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ false: colors.disabled, true: colors.violet }}
-        thumbColor={colors.text}
-      />
+      {trailing}
     </View>
-  );
-}
-
-function navRow(icon: "dumbbell" | "shield", label: string, onPress: () => void) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 2 }}
-    >
-      <Icon name={icon} size={16} color={colors.violetLight} />
-      <Text style={{ color: colors.text, fontSize: 13, fontFamily: fonts.bodyMedium, flex: 1 }}>
-        {label}
-      </Text>
-      <Icon name="arrow" size={14} color={colors.muted} />
-    </Pressable>
   );
 }
 
 export default function ProfileScreen() {
+  const { session } = useSession();
   const router = useRouter();
-  const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  const [data, setData] = useState<ProfileData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!session) return;
+    const userId = session.user.id;
+
+    try {
+      const profile = await getMyProfile(userId);
+      const [streak, totals, titles, rankHistory] = await Promise.all([
+        getMyStreak(userId),
+        getLifetimeTotals(userId),
+        listMyTitles(userId),
+        getRankHistory(userId),
+      ]);
+      setData({
+        profile,
+        streak,
+        totalXp: totals.totalXp,
+        questsDone: totals.questsDone,
+        equippedTitle: titles.find((t) => t.id === profile.title_id) ?? null,
+        rankHistory,
+      });
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load your profile.");
+    }
+  }, [session]);
+
+  const { loading, refreshing, refresh } = useFocusLoad(load);
 
   useEffect(() => {
     void ensureNotificationChannel();
-    getNotificationPrefs().then(setPrefs);
+    getNotificationPrefs().then(setNotifPrefs);
   }, []);
 
-  async function updatePrefs(next: NotificationPrefs) {
-    setPrefs(next);
-    if (next.dailyReminderEnabled || next.streakReminderEnabled) {
+  async function toggleDailyReminder(value: boolean) {
+    if (!notifPrefs) return;
+    const next = { ...notifPrefs, dailyReminderEnabled: value };
+    setNotifPrefs(next);
+    if (value) {
       const granted = await requestNotificationPermission();
       if (!granted) {
-        // Permission denied: keep the toggle visually off rather than silently failing —
-        // nothing gets scheduled either way, this just keeps the UI honest about it.
-        const reverted = { ...next, dailyReminderEnabled: false, streakReminderEnabled: false };
-        setPrefs(reverted);
-        await setNotificationPrefs(reverted);
+        setNotifPrefs(notifPrefs);
         return;
       }
     }
@@ -104,101 +115,413 @@ export default function ProfileScreen() {
     void WebBrowser.openBrowserAsync(`${API_URL}${path}`);
   }
 
+  if (loading) {
+    return (
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <ActivityIndicator color={colors.violet} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!data) {
+    return (
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
+        <Text style={{ color: colors.danger, fontSize: 14, textAlign: "center" }}>
+          {error ?? "Something went wrong."}
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  const { profile, streak, totalXp, questsDone, equippedTitle, rankHistory } = data;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 20, flexGrow: 1 }}>
-        <View style={{ alignItems: "center", gap: 10, paddingVertical: 12 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 36, gap: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refresh()}
+            tintColor={colors.violet}
+          />
+        }
+      >
+        <View style={{ alignItems: "center", gap: 10, paddingVertical: 8 }}>
+          <View style={{ width: 76, height: 76 }}>
+            <View
+              style={{
+                width: 76,
+                height: 76,
+                borderRadius: 22,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: "rgba(167,139,250,0.35)",
+                backgroundColor: "#241a3f",
+              }}
+            >
+              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 22 }}>
+                {initials(profile.username)}
+              </Text>
+            </View>
+            <View
+              style={{
+                position: "absolute",
+                bottom: -4,
+                right: -4,
+                minWidth: 26,
+                height: 26,
+                borderRadius: 13,
+                paddingHorizontal: 6,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: colors.violet,
+                borderWidth: 2,
+                borderColor: colors.background,
+              }}
+            >
+              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 11 }}>
+                {profile.level}
+              </Text>
+            </View>
+          </View>
+          <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 19 }}>
+            {profile.username}
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 11 }}>
+            Joined {formatJoinedDate(profile.created_at)}
+          </Text>
           <View
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
+              flexDirection: "row",
               alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "rgba(124,58,237,0.14)",
+              gap: 8,
+              marginTop: 4,
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: "rgba(27,27,47,0.62)",
             }}
           >
-            <Icon name="profile" size={24} color={colors.violetLight} />
+            <RankChip rank={profile.rank} />
+            <View>
+              <Text
+                style={{ color: colors.muted, fontSize: 8, fontWeight: "700", letterSpacing: 1 }}
+              >
+                CURRENT RANK
+              </Text>
+              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}>
+                {rankLabels[profile.rank]}
+              </Text>
+            </View>
           </View>
-          <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 17 }}>
-            Settings
-          </Text>
         </View>
 
-        <View style={{ gap: 10 }}>
-          {sectionLabel("NOTIFICATIONS")}
-          {card(
-            prefs ? (
-              <>
-                {toggleRow(
-                  "Daily quest reminder",
-                  prefs.dailyReminderEnabled,
-                  (value) => void updatePrefs({ ...prefs, dailyReminderEnabled: value }),
-                )}
-                {prefs.dailyReminderEnabled ? (
-                  <View style={{ gap: 8 }}>
-                    <Text style={{ color: colors.muted, fontSize: 10 }}>Reminder time</Text>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <Stepper
-                        value={prefs.dailyReminderHour}
-                        min={0}
-                        max={23}
-                        suffix="h"
-                        onChange={(hour) => void updatePrefs({ ...prefs, dailyReminderHour: hour })}
-                      />
-                      <Stepper
-                        value={prefs.dailyReminderMinute}
-                        min={0}
-                        max={45}
-                        step={15}
-                        suffix="m"
-                        onChange={(minute) =>
-                          void updatePrefs({ ...prefs, dailyReminderMinute: minute })
-                        }
-                      />
-                    </View>
-                  </View>
-                ) : null}
-                {toggleRow(
-                  "Streak-at-risk reminder",
-                  prefs.streakReminderEnabled,
-                  (value) => void updatePrefs({ ...prefs, streakReminderEnabled: value }),
-                )}
-              </>
-            ) : (
-              <Text style={{ color: colors.muted, fontSize: 12 }}>Loading...</Text>
-            ),
-          )}
-        </View>
-
-        <View style={{ gap: 10 }}>
-          {sectionLabel("HEALTH & FITNESS")}
-          {card(
-            navRow("dumbbell", "Health Connect sync", () => router.push("/profile/health-connect")),
-          )}
-        </View>
-
-        <View style={{ gap: 10 }}>
-          {sectionLabel("ABOUT")}
-          {card(
-            <>
-              {navRow("shield", "Privacy Policy", () => openUrl("/privacy"))}
-              {navRow("shield", "Terms of Service", () => openUrl("/terms"))}
-            </>,
-          )}
-        </View>
-
-        <View style={{ marginTop: "auto" }}>
-          <Button
-            variant="ghost"
-            icon="logout"
-            onPress={() => {
-              void signOut();
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View
+            style={{
+              flex: 1,
+              padding: 12,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: "rgba(27,27,47,0.7)",
+              gap: 3,
             }}
           >
-            Sign out
-          </Button>
+            <Text style={{ color: colors.muted, fontSize: 8, fontWeight: "700", letterSpacing: 1 }}>
+              QUESTS
+            </Text>
+            <Text style={{ color: colors.text, fontFamily: fonts.displayBold, fontSize: 18 }}>
+              {questsDone.toLocaleString()}
+            </Text>
+          </View>
+          <View
+            style={{
+              flex: 1,
+              padding: 12,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: "rgba(27,27,47,0.7)",
+              gap: 3,
+            }}
+          >
+            <Text style={{ color: colors.muted, fontSize: 8, fontWeight: "700", letterSpacing: 1 }}>
+              TOTAL XP
+            </Text>
+            <Text style={{ color: colors.text, fontFamily: fonts.displayBold, fontSize: 18 }}>
+              {totalXp.toLocaleString()}
+            </Text>
+          </View>
+          <View
+            style={{
+              flex: 1,
+              padding: 12,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: "rgba(27,27,47,0.7)",
+              gap: 3,
+            }}
+          >
+            <Text style={{ color: colors.muted, fontSize: 8, fontWeight: "700", letterSpacing: 1 }}>
+              STREAK
+            </Text>
+            <Text style={{ color: colors.text, fontFamily: fonts.displayBold, fontSize: 18 }}>
+              {streak.current}
+            </Text>
+          </View>
         </View>
+
+        <View style={{ gap: 10 }}>
+          {sectionHeader(
+            "EQUIPPED TITLE",
+            <Pressable onPress={() => router.push("/stats")}>
+              <Text
+                style={{ color: colors.violetLight, fontSize: 11, fontFamily: fonts.bodySemiBold }}
+              >
+                View all
+              </Text>
+            </Pressable>,
+          )}
+          <Pressable
+            onPress={() => router.push("/stats")}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              padding: 14,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: "rgba(27,27,47,0.62)",
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(124,58,237,0.14)",
+              }}
+            >
+              <Icon
+                name={equippedTitle ? titleIcon(equippedTitle.unlockRule) : "shield"}
+                size={18}
+                color={colors.violetLight}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}
+              >
+                TITLE
+              </Text>
+              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 14 }}>
+                {equippedTitle?.name ?? "No title equipped"}
+              </Text>
+              {equippedTitle?.description ? (
+                <Text style={{ color: colors.muted, fontSize: 11 }}>
+                  {equippedTitle.description}
+                </Text>
+              ) : !equippedTitle ? (
+                <Text style={{ color: colors.muted, fontSize: 11 }}>Unlock one in Stats</Text>
+              ) : null}
+            </View>
+            <Icon name="arrow" size={15} color={colors.muted} />
+          </Pressable>
+        </View>
+
+        <View style={{ gap: 10 }}>
+          {sectionHeader(
+            "RANK HISTORY",
+            <Text style={{ color: colors.muted, fontSize: 10, fontFamily: fonts.bodySemiBold }}>
+              {rankHistory.length} ascension{rankHistory.length === 1 ? "" : "s"}
+            </Text>,
+          )}
+          {rankHistory.length === 0 ? (
+            <View
+              style={{
+                padding: 14,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: "rgba(27,27,47,0.62)",
+              }}
+            >
+              <Text style={{ color: colors.muted, fontSize: 12 }}>
+                Complete quests to climb past Rank E.
+              </Text>
+            </View>
+          ) : (
+            <View
+              style={{
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: "rgba(27,27,47,0.62)",
+                overflow: "hidden",
+              }}
+            >
+              {rankHistory.map((entry, index) => (
+                <View
+                  key={`${entry.rank}-${entry.achievedAt}`}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: 14,
+                    borderTopWidth: index === 0 ? 0 : 1,
+                    borderTopColor: colors.border,
+                  }}
+                >
+                  <RankChip rank={entry.rank} />
+                  <Text
+                    style={{
+                      flex: 1,
+                      color: colors.text,
+                      fontFamily: fonts.displaySemiBold,
+                      fontSize: 13,
+                    }}
+                  >
+                    {rankLabels[entry.rank]}
+                  </Text>
+                  <Text style={{ color: colors.muted, fontSize: 11 }}>
+                    {formatShortDate(entry.achievedAt)}
+                  </Text>
+                  {index === 0 ? (
+                    <Text
+                      style={{
+                        color: colors.violetLight,
+                        fontSize: 9,
+                        fontWeight: "700",
+                        letterSpacing: 1,
+                      }}
+                    >
+                      CURRENT
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={{ gap: 10 }}>
+          {sectionHeader("SETTINGS")}
+          <SettingsCard>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Icon name="moon" size={17} color={colors.violetLight} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 13, fontFamily: fonts.bodySemiBold }}>
+                  Dark theme
+                </Text>
+                <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }}>
+                  The only theme, for now
+                </Text>
+              </View>
+              <View
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 10,
+                  backgroundColor: "rgba(124,58,237,0.16)",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.violetLight,
+                    fontSize: 10,
+                    fontFamily: fonts.bodySemiBold,
+                  }}
+                >
+                  ON
+                </Text>
+              </View>
+            </View>
+
+            {notifPrefs ? (
+              <SettingsToggleRow
+                icon="clock"
+                label="Daily reminders"
+                subtitle={
+                  notifPrefs.dailyReminderEnabled
+                    ? `Every day at ${String(notifPrefs.dailyReminderHour).padStart(2, "0")}:${String(notifPrefs.dailyReminderMinute).padStart(2, "0")}`
+                    : "Reminders paused"
+                }
+                value={notifPrefs.dailyReminderEnabled}
+                onChange={(value) => void toggleDailyReminder(value)}
+              />
+            ) : null}
+
+            <SettingsNavRow
+              icon="bell"
+              label="Notifications"
+              subtitle="Quests, streaks, and rewards"
+              onPress={() => router.push("/profile/notifications")}
+            />
+            <SettingsNavRow
+              icon="dumbbell"
+              label="Health Connect"
+              subtitle="Sync steps and workouts"
+              onPress={() => router.push("/profile/health-connect")}
+            />
+            <SettingsNavRow
+              icon="shield"
+              label="Privacy Policy"
+              subtitle="Account permissions and data"
+              onPress={() => openUrl("/privacy")}
+            />
+            <SettingsNavRow
+              icon="shield"
+              label="Terms of Service"
+              onPress={() => openUrl("/terms")}
+            />
+          </SettingsCard>
+        </View>
+
+        {error ? (
+          <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>{error}</Text>
+        ) : null}
+
+        <Button
+          variant="ghost"
+          icon="logout"
+          loading={signingOut}
+          onPress={() => {
+            setSigningOut(true);
+            void signOut().catch(() => setSigningOut(false));
+          }}
+        >
+          Sign out
+        </Button>
+
+        <Text
+          style={{ color: colors.disabled, fontSize: 9, textAlign: "center", letterSpacing: 1 }}
+        >
+          LEVEL UP · VERSION 1.0.0
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

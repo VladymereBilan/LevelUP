@@ -1,4 +1,4 @@
-import type { Stat } from "@levelup/engine";
+import type { Rank, Stat } from "@levelup/engine";
 
 /**
  * Mirrors the `:root` custom properties in `design/reference/src/index.css`.
@@ -70,3 +70,13 @@ export const difficultyColors = {
   normal: colors.blueLight,
   hard: "#F87171",
 } as const;
+
+/** Original flavor names for each rank letter — purely presentational, no game-rule meaning. */
+export const rankLabels: Record<Rank, string> = {
+  E: "Newcomer",
+  D: "Apprentice",
+  C: "Rising Challenger",
+  B: "Elite Operative",
+  A: "Veteran Ascendant",
+  S: "Legendary Vanguard",
+};
