@@ -1,0 +1,26 @@
+name: Keep-alive
+
+# Hits the public, unauthenticated /api/health route every 3 days so the hosted Supabase
+# project's free tier never pauses for inactivity (see docs/PRODUCTION.md). The route itself
+# reads one row from `titles` server-side via the service-role key — no secret is needed here,
+# since this workflow only ever does an unauthenticated GET against a public URL.
+
+on:
+  schedule:
+    - cron: "0 9 */3 * *" # 09:00 UTC, every 3rd day
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the health route
+        run: |
+          url="https://web-nine-chi-48.vercel.app/api/health"
+          status=$(curl -s -o /tmp/health.json -w "%{http_code}" "$url")
+          echo "HTTP $status"
+          cat /tmp/health.json
+          if [ "$status" != "200" ]; then
+            echo "::error::Health check failed with HTTP $status"
+            exit 1
+          fi
