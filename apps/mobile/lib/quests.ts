@@ -32,6 +32,12 @@ export interface StreakSummary {
   lastCompletedDate: string | null;
 }
 
+export interface UnlockedTitle {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 export interface QuestCompleteResult {
   questId: string;
   xpAwarded: number;
@@ -44,7 +50,10 @@ export interface QuestCompleteResult {
   stat: Stat;
   statValue: number;
   streak: StreakSummary;
+  /** The player's currently EQUIPPED title (profiles.title_id), if any — not necessarily
+   * related to this completion. See `titlesUnlocked` for what was newly earned just now. */
   title: string | null;
+  titlesUnlocked: UnlockedTitle[];
 }
 
 export interface CompleteQuestInput {

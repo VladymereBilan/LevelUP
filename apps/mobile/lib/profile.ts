@@ -42,3 +42,9 @@ export async function getMyProfile(userId: string): Promise<ProfileSummary> {
 export async function setTimezone(timezone: string): Promise<void> {
   await apiFetch<{ timezone: string }>("/api/profile/timezone", { body: { timezone } });
 }
+
+/** Equips (or, with `null`, unequips) one of the caller's own unlocked titles. The server
+ * re-validates ownership against user_titles — this isn't just a courtesy client-side check. */
+export async function equipTitle(titleId: string | null): Promise<{ titleId: string | null }> {
+  return apiFetch<{ titleId: string | null }>("/api/profile/title", { body: { titleId } });
+}

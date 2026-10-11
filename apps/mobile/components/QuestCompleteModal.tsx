@@ -84,11 +84,52 @@ export function QuestCompleteModal({ visible, result, onContinue }: QuestComplet
           </View>
         ) : null}
 
-        {result.title ? (
-          <Text
-            style={{ marginTop: 16, color: colors.violetLight, fontSize: 12, textAlign: "center" }}
+        {result.titlesUnlocked.length > 0 ? (
+          <View
+            style={{
+              marginTop: 20,
+              width: "100%",
+              gap: 8,
+              padding: 14,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "rgba(167,139,250,0.35)",
+              backgroundColor: "rgba(124,58,237,0.1)",
+            }}
           >
-            New title unlocked: {result.title}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Icon name="trophy" size={14} color={colors.violetLight} />
+              <Text
+                style={{
+                  color: colors.violetLight,
+                  fontSize: 9,
+                  fontWeight: "700",
+                  letterSpacing: 1,
+                }}
+              >
+                TITLE{result.titlesUnlocked.length > 1 ? "S" : ""} UNLOCKED
+              </Text>
+            </View>
+            {result.titlesUnlocked.map((title) => (
+              <View key={title.id}>
+                <Text
+                  style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+                >
+                  {title.name}
+                </Text>
+                {title.description ? (
+                  <Text style={{ color: colors.muted, fontSize: 10, marginTop: 1 }}>
+                    {title.description}
+                  </Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {result.title ? (
+          <Text style={{ marginTop: 16, color: colors.muted, fontSize: 11 }}>
+            Equipped title: <Text style={{ color: colors.text }}>{result.title}</Text>
           </Text>
         ) : null}
 

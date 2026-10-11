@@ -12,6 +12,7 @@ import {
   type QuestSource,
   type Stat,
 } from "@levelup/engine";
+import { computeNewlyUnlockedTitles } from "@levelup/db";
 import { authenticate, enforceRateLimit } from "@/lib/api/auth";
 
 const RATE_LIMIT = { endpoint: "quests.complete", maxRequests: 20, windowSeconds: 60 };
@@ -180,6 +181,26 @@ export async function POST(
   const progress =
     requestedProgress ?? defaultProgressFor(quest.target as unknown as ActivityTarget);
 
+  let titlesUnlocked: { id: string; name: string; description: string | null }[];
+  try {
+    titlesUnlocked = await computeNewlyUnlockedTitles(
+      supabase,
+      userId,
+      {
+        level: awardResult.progress.level,
+        rank: newRank,
+        longestStreak: newStreak.longest,
+        stats: newStats,
+      },
+      { xp: xpAwarded, completedQuestStat: stat },
+    );
+  } catch (err) {
+    return Response.json(
+      { error: err instanceof Error ? err.message : "Failed to evaluate titles" },
+      { status: 500 },
+    );
+  }
+
   const { data: result, error: completeError } = await supabase.rpc("complete_quest", {
     p_quest_id: questId,
     p_user_id: userId,
@@ -202,6 +223,7 @@ export async function POST(
     // the `?? localDate` fallback keeps that true for the type checker too.
     p_new_streak_last_date: newStreak.lastCompletedDate ?? localDate,
     p_new_streak_grace_used: newStreak.graceDaysUsed,
+    p_titles_unlocked: titlesUnlocked,
   });
 
   if (completeError || !result) {

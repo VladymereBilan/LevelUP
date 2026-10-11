@@ -61,6 +61,18 @@ export function describeTitleUnlockRule(rule: unknown): string {
       return typeof r.value === "string" ? `Reach Rank ${r.value}.` : "Reach a higher rank.";
     case "level":
       return typeof r.value === "number" ? `Reach Level ${r.value}.` : "Reach a higher level.";
+    case "totalQuestsCompleted":
+      return typeof r.value === "number"
+        ? `Complete ${r.value} quests, lifetime.`
+        : "Complete enough quests.";
+    case "totalXp":
+      return typeof r.value === "number"
+        ? `Earn ${r.value.toLocaleString()} XP, lifetime.`
+        : "Earn enough XP.";
+    case "statQuestsCompleted":
+      return typeof r.stat === "string" && typeof r.value === "number"
+        ? `Complete ${r.value} ${statLabels[r.stat as Stat] ?? r.stat} quests.`
+        : "Complete enough quests in a stat.";
     default:
       return "Requirement unknown.";
   }
@@ -76,8 +88,12 @@ export function titleIcon(rule: unknown): IconName {
     case "rank":
       return "trophy";
     case "level":
+    case "totalXp":
       return "sparkles";
+    case "totalQuestsCompleted":
+      return "quest";
     case "stat":
+    case "statQuestsCompleted":
       return typeof r.stat === "string" && r.stat in STAT_ICONS
         ? STAT_ICONS[r.stat as Stat]
         : "shield";

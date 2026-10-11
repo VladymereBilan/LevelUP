@@ -7,3 +7,4 @@ export * from "./timezone";
 export * from "./penalties";
 export * from "./activityTargets";
 export * from "./templates";
+export * from "./titles";

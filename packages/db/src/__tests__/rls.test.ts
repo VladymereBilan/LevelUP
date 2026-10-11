@@ -197,6 +197,25 @@ describe.skipIf(!configured)("RLS policies", () => {
       .update({ name: "hacked" })
       .eq("id", title!.id);
     expect(writeError).not.toBeNull();
+
+    await admin.from("titles").delete().eq("id", title!.id);
+  });
+
+  it("blocks a client from inserting into user_titles directly", async () => {
+    const a = await newUser("user-titles-write");
+
+    const { data: title } = await admin
+      .from("titles")
+      .insert({ name: `Test Title ${crypto.randomUUID()}` })
+      .select("id")
+      .single();
+
+    const { error } = await a.client
+      .from("user_titles")
+      .insert({ user_id: a.user.id, title_id: title!.id });
+    expect(error).not.toBeNull();
+
+    await admin.from("titles").delete().eq("id", title!.id);
   });
 
   it("blocks a client from writing user_challenges at all", async () => {

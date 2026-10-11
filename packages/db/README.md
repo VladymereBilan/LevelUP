@@ -20,6 +20,14 @@ src/
                                     @levelup/engine starter template into a user's own
                                     categories/activities
   cli/seed.ts                      CLI wrapper: `pnpm seed <userId> <templateId>`
+  titleAwarding.ts                 computeNewlyUnlockedTitles(...) — assembles a
+                                    TitleEvaluationState from the DB and runs
+                                    @levelup/engine's evaluateTitleRules; used by both
+                                    apps/web's completion route and backfillTitles.ts
+  backfillTitles.ts                backfillTitlesForUser(userId) — evaluates titles against a
+                                    user's CURRENT profile/stats/streak and awards anything
+                                    newly satisfied; safe to re-run
+  cli/backfillTitles.ts            CLI wrapper: `pnpm backfill-titles <userId>`
   __tests__/rls.test.ts            RLS test suite (see "Running the real-DB tests")
   __tests__/rpc-privileges.test.ts Proves complete_quest/generate_daily_quests/check_rate_limit
                                     can't be called directly by an authenticated client
@@ -82,6 +90,18 @@ Copies that `@levelup/engine` template's categories and activities as that user'
 Templates aren't stored as ownerless rows in the database — every `categories`/`activities` row
 has a required `user_id`, which is what lets RLS scope rows to their owner.
 
+## Backfilling titles for an existing user
+
+```bash
+pnpm --filter @levelup/db backfill-titles <userId>
+```
+
+Titles are only ever awarded as a side effect of `complete_quest()` — there's no scheduled job
+re-checking everyone's progress. This evaluates one user's _current_ profile/stats/streak
+against the titles catalog and awards anything newly satisfied, for progress made before title
+awarding existed (or before a new title was added to the catalog). Safe to re-run: it's a
+no-op for a user with nothing new to award.
+
 ## Running the real-DB tests
 
 Three suites run against a real Supabase — there's no way to verify Postgres's row-level
@@ -137,7 +157,8 @@ Only past all three does a suite create test users/rows, and `afterAll` cleans t
 when a test fails). `rls.test.ts` asserts things like: a user can't read another user's profile;
 no client can write `level`/`xp`/`rank`/`stats` or insert into `xp_events`; a user can update
 their own quest's `progress` but not flip its `status` to `completed`; `titles` is readable by
-any authenticated user but not writable; `user_challenges` can't be written by a client at all.
+any authenticated user but not writable; neither `user_titles` nor `user_challenges` can be
+written by a client at all.
 
 **Both packages auto-load root `.env.local`** (`vitest.setup.ts` in each — a ~15-line
 dependency-free loader, mirrored in both so they behave identically). That means if you have
@@ -151,11 +172,11 @@ always on for you. A fresh clone with no `.env.local` at all still skips cleanly
 
 ## Functions
 
-| Function                                                            | Caller              | Purpose                                                                                                                                                                                                           |
-| ------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `complete_quest(...)`                                               | `service_role` only | Atomic completion writer — quest status + `xp_events` + `profiles` + `stats` + `streaks` in one transaction. Re-validates ownership/status and locks the quest row even though the route handler already checked. |
-| `generate_daily_quests(user_id, date)`                              | `service_role` only | Creates pending quests from active (non-archived) activities whose schedule matches `date`. Idempotent via `ON CONFLICT DO NOTHING` on the quests unique constraint.                                              |
-| `check_rate_limit(user_id, endpoint, max_requests, window_seconds)` | `service_role` only | Self-cleaning fixed-window-lookback rate limiter backed by `rate_limit_hits`.                                                                                                                                     |
+| Function                                                            | Caller              | Purpose                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `complete_quest(...)`                                               | `service_role` only | Atomic completion writer — quest status + `xp_events` + `profiles` + `stats` + `streaks` + `user_titles` in one transaction. Re-validates ownership/status and locks the quest row even though the route handler already checked. Which titles to award (if any) is computed by the route via `@levelup/db`'s `computeNewlyUnlockedTitles` and passed in as `p_titles_unlocked`. |
+| `generate_daily_quests(user_id, date)`                              | `service_role` only | Creates pending quests from active (non-archived) activities whose schedule matches `date`. Idempotent via `ON CONFLICT DO NOTHING` on the quests unique constraint.                                                                                                                                                                                                             |
+| `check_rate_limit(user_id, endpoint, max_requests, window_seconds)` | `service_role` only | Self-cleaning fixed-window-lookback rate limiter backed by `rate_limit_hits`.                                                                                                                                                                                                                                                                                                    |
 
 All three `set search_path = ''` and fully qualify every reference, per standard `SECURITY
 DEFINER` hardening guidance (an unqualified name inside a definer function resolves against
