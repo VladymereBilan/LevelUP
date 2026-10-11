@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Icon, type IconName } from "./Icon";
 import { colors, fonts, gradient } from "../theme/tokens";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "google";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "google" | "danger";
 
 interface ButtonProps {
   children: ReactNode;
@@ -20,6 +20,7 @@ const TEXT_COLOR: Record<ButtonVariant, string> = {
   secondary: colors.violetLight,
   ghost: colors.muted,
   google: "#13131E",
+  danger: colors.danger,
 };
 
 /** Primary (gradient), secondary (tinted outline), ghost (text-only), and google (OAuth pill) button styles. */
@@ -102,6 +103,17 @@ export function Button({
             shadowRadius: 20,
             shadowOffset: { width: 0, height: 12 },
             elevation: 4,
+          }}
+        >
+          {content}
+        </View>
+      ) : variant === "danger" ? (
+        <View
+          style={{
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(239,68,68,0.4)",
+            backgroundColor: "rgba(239,68,68,0.08)",
           }}
         >
           {content}

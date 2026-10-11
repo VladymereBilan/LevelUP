@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
+import { DeleteAccountSheet } from "../../../components/DeleteAccountSheet";
 import { Icon } from "../../../components/Icon";
 import { RankChip } from "../../../components/RankChip";
 import { SettingsCard, SettingsNavRow, SettingsToggleRow } from "../../../components/SettingsCard";
@@ -62,6 +63,7 @@ export default function ProfileScreen() {
   const [error, setError] = useState<string | null>(null);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -517,12 +519,46 @@ export default function ProfileScreen() {
           Sign out
         </Button>
 
+        <View style={{ gap: 10 }}>
+          {sectionHeader("DANGER ZONE")}
+          <View
+            style={{
+              gap: 10,
+              padding: 16,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "rgba(239,68,68,0.3)",
+              backgroundColor: "rgba(239,68,68,0.06)",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Icon name="warning" size={17} color={colors.danger} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 13, fontFamily: fonts.bodySemiBold }}>
+                  Delete my account
+                </Text>
+                <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }}>
+                  Permanently erases your progress. Cannot be undone.
+                </Text>
+              </View>
+            </View>
+            <Button variant="danger" icon="trash" onPress={() => setDeleteSheetVisible(true)}>
+              Delete my account
+            </Button>
+          </View>
+        </View>
+
         <Text
           style={{ color: colors.disabled, fontSize: 9, textAlign: "center", letterSpacing: 1 }}
         >
           LEVEL UP · VERSION 1.0.0
         </Text>
       </ScrollView>
+
+      <DeleteAccountSheet
+        visible={deleteSheetVisible}
+        onClose={() => setDeleteSheetVisible(false)}
+      />
     </SafeAreaView>
   );
 }

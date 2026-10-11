@@ -75,12 +75,14 @@ export default function PrivacyPolicyPage() {
 
       <Section title="Data deletion">
         <p>
-          To request deletion of your account and all associated data, email{" "}
-          <a href="mailto:dimmybilan@gmail.com" className="text-violet underline">
-            dimmybilan@gmail.com
-          </a>
-          . We&apos;ll confirm and complete the deletion within a reasonable time. There&apos;s no
-          in-app self-serve deletion flow yet.
+          You can delete your account and all associated data yourself, in-app: Profile → Danger
+          Zone → Delete my account. If you&apos;d rather not sign back in, you can request
+          deletion by email instead. See{" "}
+          <a href="/delete-account" className="text-violet underline">
+            Delete Your Account
+          </a>{" "}
+          for exactly how to do either, what&apos;s deleted, and how long it can persist in a
+          backup afterward.
         </p>
       </Section>
 

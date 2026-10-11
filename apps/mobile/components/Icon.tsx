@@ -26,7 +26,9 @@ export type IconName =
   | "shield"
   | "sparkles"
   | "stats"
-  | "trophy";
+  | "trash"
+  | "trophy"
+  | "warning";
 
 type IconElement =
   { type: "path"; d: string } | { type: "circle"; cx: number; cy: number; r: number };
@@ -108,9 +110,17 @@ const ICON_ELEMENTS: Record<IconName, IconElement[]> = {
     { type: "path", d: "M5 20V10M12 20V4M19 20v-7" },
     { type: "path", d: "M2 20h20" },
   ],
+  trash: [
+    { type: "path", d: "M4 7h16M10 11v6M14 11v6" },
+    { type: "path", d: "M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" },
+  ],
   trophy: [
     { type: "path", d: "M8 4h8v3a4 4 0 0 1-8 0V4Z" },
     { type: "path", d: "M8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 11v5M8 20h8M9 16h6" },
+  ],
+  warning: [
+    { type: "path", d: "M12 2 1 21h22L12 2Z" },
+    { type: "path", d: "M12 9v5M12 17.5v.01" },
   ],
 };
 

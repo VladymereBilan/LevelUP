@@ -190,7 +190,15 @@ from the app; and a rebuilt Profile tab (`app/(app)/profile/`) — hero (avatar,
 join date), quests/XP/streak tiles, equipped-title card linking into Stats, a rank-history list
 derived client-side from the `xp_events` ledger (no new table — see `lib/rankHistory.ts`'s own
 comment for the tradeoff against one), and Settings (daily-reminder toggle, links to
-Notifications/Health Connect/Privacy/Terms, sign out).
+Notifications/Health Connect/Privacy/Terms, sign out). Also shipped: in-app account deletion —
+`POST /api/account/delete` (JWT-verified, rate-limited, requires the typed confirmation
+`"DELETE"` in the body), which deletes only the `auth.users` row via the service role and lets
+the existing `on delete cascade` chain (through `profiles`) remove every other user-scoped
+table; Profile's Danger Zone section + `components/DeleteAccountSheet.tsx` drive it from the
+app, then sign out and clear local notifications/preferences (`lib/account.ts`). Required by
+Google Play's data-deletion policy alongside `apps/web/app/delete-account`, a static page
+(linked from `/privacy` and `/terms`) covering the same flow plus the email-request fallback
+for someone who can't sign back in.
 
 Known gaps, mobile:
 
@@ -241,5 +249,6 @@ Not yet started:
 
 Shipped: notifications, Health Connect + GPS run tracking, original branding, `/privacy` +
 `/terms`, the production decision itself (the hosted project *is* production — see "Production"
-above — rather than a separate project being stood up), and production safety/keep-alive/backup
-tooling (see `docs/PRODUCTION.md`).
+above — rather than a separate project being stood up), production safety/keep-alive/backup
+tooling (see `docs/PRODUCTION.md`), and in-app account deletion (Google Play requirement) with
+its `apps/web/app/delete-account` companion page.

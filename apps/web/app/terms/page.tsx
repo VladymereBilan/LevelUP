@@ -58,8 +58,12 @@ export default function TermsOfServicePage() {
 
       <Section title="Account termination">
         <p>
-          You can stop using the app at any time and request account deletion (see the Privacy
-          Policy). We may suspend an account used to abuse the service, including attempts to submit
+          You can stop using the app at any time and delete your account yourself, in-app or by
+          email — see{" "}
+          <a href="/delete-account" className="text-violet underline">
+            Delete Your Account
+          </a>
+          . We may suspend an account used to abuse the service, including attempts to submit
           forged progress data.
         </p>
       </Section>

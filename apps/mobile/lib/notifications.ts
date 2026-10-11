@@ -110,3 +110,12 @@ export async function setNotificationPrefs(prefs: NotificationPrefs): Promise<vo
   await savePrefs(prefs);
   await applyNotificationSchedule(prefs);
 }
+
+/** Cancels every scheduled local notification and removes the saved preferences — called on
+ * account deletion, alongside signing out and clearing secure storage. Each step is
+ * best-effort: a stale/already-cancelled notification ID or a missing key should never block
+ * the rest of account-deletion cleanup. */
+export async function clearAllNotificationData(): Promise<void> {
+  await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
+  await SecureStore.deleteItemAsync(PREFS_KEY).catch(() => {});
+}
