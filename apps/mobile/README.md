@@ -38,10 +38,16 @@ flow logs the authorization code, a token, or the session object.
 Create `apps/mobile/.env.local` (gitignored — never commit this) with:
 
 ```
-EXPO_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-EXPO_PUBLIC_API_URL=<apps/web's deployed URL, e.g. https://web-nine-chi-48.vercel.app>
+EXPO_PUBLIC_SUPABASE_URL=<your local Supabase URL, or the hosted project's for a release build>
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<matching anon key>
+EXPO_PUBLIC_API_URL=<apps/web's base URL for that same backend>
 ```
+
+Day-to-day development: point these at a **local** Supabase (`npx supabase start` from
+`packages/db`, local `apps/web` dev server as `EXPO_PUBLIC_API_URL`) — the hosted project is
+PRODUCTION (see root `CLAUDE.md` "Production" and `docs/PRODUCTION.md`), not a dev sandbox. Only
+point at the hosted project's URL and the deployed `apps/web` URL deliberately — testing a real
+release build, or reproducing a production-only issue.
 
 Only the **anon** key — never the service-role key, which must never exist anywhere in this app.
 `EXPO_PUBLIC_API_URL` is apps/web's base URL — lib/api.ts calls it for every server route

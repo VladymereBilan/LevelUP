@@ -14,8 +14,13 @@ src/
   database.types.ts               Database type — generated, see "Regenerating types"
   client.ts                        createServiceRoleClient()
   testing.ts                       Shared real-DB test helpers (exported as "@levelup/db/testing") —
-                                    reachability/key-validation/remote-host-guard logic every
+                                    reachability/key-validation/local-host-guard logic every
                                     real-DB suite in this repo uses, here and in apps/web
+  host.ts                          isLocalSupabaseHost(url) — the one place "is this URL
+                                    local" is defined; testing.ts and scriptGuard.ts both import it
+  scriptGuard.ts                   assertScriptMayRun(label) — every CLI script that writes data
+                                    calls this first; refuses a non-local host without
+                                    CONFIRM_PRODUCTION_WRITE=true (see "Production safety" below)
   seed.ts                          seedStarterTemplate(userId, templateId) — copies an
                                     @levelup/engine starter template into a user's own
                                     categories/activities
@@ -46,22 +51,46 @@ Every table explicitly `REVOKE ALL ... FROM anon, authenticated` before granting
 what's intended — see the comment at the top of `20260310000007_rls_policies.sql` for why that
 matters even though RLS alone (zero policies for a command) already blocks it.
 
+## Production safety
+
+**The hosted project (`levelup-dev`, ref `vxtxwqdsickveyjvgcyu`) is PRODUCTION** — see
+`CLAUDE.md` and `docs/PRODUCTION.md`. All development and every automated test suite run
+against a local Supabase instead (below). Two independent guards enforce this:
+
+- **Test suites** (`src/testing.ts`'s `createVerifiedServiceRoleClient`): fail loudly — not
+  skip — if `SUPABASE_URL` is set but isn't `localhost`/`127.0.0.1`/`::1`. There is no opt-in
+  flag; these suites create and delete real auth users and rows, so there is no scenario where
+  running them against production is something you'd actually want.
+- **CLI scripts** (`seed`, `backfill-titles`, and any future one-off maintenance script, via
+  `scriptGuard.ts`'s `assertScriptMayRun`): always print the target host first, and for a
+  non-local host refuse unless `CONFIRM_PRODUCTION_WRITE=true` is explicitly set — these are
+  legitimate to run against production occasionally (seeding a real new user's starter
+  template, backfilling a real user's titles), just never by accident.
+
+Both import the same `isLocalSupabaseHost` from `host.ts`, so "local" is defined in exactly one
+place.
+
 ## Local development (needs Docker)
 
 ```bash
-npx supabase start          # from packages/db — spins up local Postgres/Auth/Studio
-npx supabase db reset       # applies every migration in supabase/migrations, fresh
+pnpm --filter @levelup/db db:start   # spins up local Postgres/Auth/Studio (or: npx supabase start, from packages/db)
+pnpm --filter @levelup/db db:reset   # applies every migration in supabase/migrations, fresh
+pnpm --filter @levelup/db db:stop    # tears the local stack down when you're done
 ```
 
 `supabase start` prints the local `anon` and `service_role` keys and the API URL — put them in
-your root `.env` (see `.env.example`) as `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
-`SUPABASE_SERVICE_ROLE_KEY`.
+your root `.env.local` (see `.env.example`) as `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY`. **Docker Desktop with the WSL2 backend is required on Windows** —
+install Docker Desktop, enable "Use the WSL 2 based engine" in its settings, and ensure a WSL2
+distro is installed (`wsl --install` from an elevated PowerShell if `wsl --status` reports it
+isn't).
 
 **This repo's dev environment doesn't have Docker**, so the migrations have never run against a
-_local_ Postgres — only syntax-validated offline against `libpg_query` (via the `pglast` Python
-package). They have, however, been applied to and verified against the hosted dev project (see
-"Running the real-DB tests" below) — that's a real Postgres, just not a local one. Run
-`supabase db reset` against a local instance too before trusting this schema there specifically.
+_local_ Postgres here — only syntax-validated offline against `libpg_query` (via the `pglast`
+Python package). They have, however, been applied to and verified against the hosted project
+when it was still being used as a dev/test target, before the production decision above — that
+history doesn't change the current rule: nothing automated touches it anymore. Run
+`supabase db reset` against a local instance before trusting this schema there.
 
 ## Regenerating `database.types.ts`
 
@@ -90,6 +119,13 @@ Copies that `@levelup/engine` template's categories and activities as that user'
 Templates aren't stored as ownerless rows in the database — every `categories`/`activities` row
 has a required `user_id`, which is what lets RLS scope rows to their owner.
 
+Prints the target `SUPABASE_URL` host before doing anything. Against production
+(`CONFIRM_PRODUCTION_WRITE=true` required — see "Production safety" above):
+
+```bash
+CONFIRM_PRODUCTION_WRITE=true pnpm --filter @levelup/db seed <userId> <templateId>
+```
+
 ## Backfilling titles for an existing user
 
 ```bash
@@ -101,6 +137,9 @@ re-checking everyone's progress. This evaluates one user's _current_ profile/sta
 against the titles catalog and awards anything newly satisfied, for progress made before title
 awarding existed (or before a new title was added to the catalog). Safe to re-run: it's a
 no-op for a user with nothing new to award.
+
+Same production guard as `seed` above — prints the host, requires `CONFIRM_PRODUCTION_WRITE=true`
+for a non-local one.
 
 ## Running the real-DB tests
 
@@ -116,28 +155,23 @@ Postgres + PostgREST:
 
 All three share `src/testing.ts` (exported as `@levelup/db/testing`) and follow the same policy:
 **they only skip when `SUPABASE_URL` isn't set at all.** Once a URL is configured, anything else
-wrong — the host unreachable, a rejected key, a missing opt-in for a non-local host — is a
-**test failure**, not a silent skip. A configured-but-broken setup is a real problem and should
-show up loudly, not get hidden behind "skipped". When a suite does skip, the message says exactly
-which env var(s) are missing or empty (never their values).
+wrong — a non-local host, the host unreachable, a rejected key — is a **test failure**, not a
+silent skip. A configured-but-broken setup is a real problem and should show up loudly, not get
+hidden behind "skipped". When a suite does skip, the message says exactly which env var(s) are
+missing or empty (never their values).
 
 ```bash
-# local (from packages/db, requires Docker):
+# from packages/db, requires Docker:
 npx supabase start
 npx supabase db reset
 pnpm --filter @levelup/db test              # rls + rpc-privileges
 pnpm --filter @levelup/web test              # the route-handler suite
-
-# hosted project:
-# set SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY to the project's values
-RLS_TEST_ALLOW_REMOTE=true pnpm --filter @levelup/db test
-RLS_TEST_ALLOW_REMOTE=true pnpm --filter @levelup/web test
 ```
 
-`RLS_TEST_ALLOW_REMOTE=true` is required for any non-local host (anything but `localhost`/
-`127.0.0.1`/`::1`) — a deliberate safety guard, since these suites create and delete real
-throwaway auth users (and rows) against whatever project `SUPABASE_URL` points at. The resolved
-host is logged before that guard is even checked, so you always know what you were about to hit.
+There is no hosted option. The hosted project is PRODUCTION (see "Production safety" above) —
+these suites create and delete real throwaway auth users (and rows), so there is no flag that
+lets them run against it; `SUPABASE_URL` must resolve to `localhost`/`127.0.0.1`/`::1` or the
+suite fails immediately, host logged first so you always know what it was about to hit.
 
 Before running anything, each suite validates the environment in this order:
 
@@ -161,14 +195,12 @@ any authenticated user but not writable; neither `user_titles` nor `user_challen
 written by a client at all.
 
 **Both packages auto-load root `.env.local`** (`vitest.setup.ts` in each — a ~15-line
-dependency-free loader, mirrored in both so they behave identically). That means if you have
-`.env.local` configured with a hosted project's credentials, a plain `pnpm test` from the repo
-root will pick it up and attempt these suites too — correctly **failing**, not skipping, on the
-remote-host guard until you set `RLS_TEST_ALLOW_REMOTE=true`. Two ways to live with that day to
-day: pass the env var each time you deliberately want the real run (as shown above), or — once
-you're genuinely comfortable with routine `pnpm test` runs hitting this project — add
-`RLS_TEST_ALLOW_REMOTE=true` to your own `.env.local` (it's gitignored and personal) so it's
-always on for you. A fresh clone with no `.env.local` at all still skips cleanly either way.
+dependency-free loader, mirrored in both so they behave identically). Point it at your local
+Supabase instance (the values `supabase start` prints) and a plain `pnpm test` from the repo
+root just works. If `.env.local` is ever accidentally left pointing at the hosted project, `pnpm
+test` **fails immediately** on the local-host guard rather than quietly running against
+production — there's no flag to override that. A fresh clone with no `.env.local` at all skips
+these suites cleanly instead.
 
 ## Functions
 

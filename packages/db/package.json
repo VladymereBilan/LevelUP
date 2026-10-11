@@ -16,7 +16,10 @@
     "test:rls": "vitest run src/__tests__/rls.test.ts",
     "test:rpc-privileges": "vitest run src/__tests__/rpc-privileges.test.ts",
     "seed": "tsx src/cli/seed.ts",
-    "backfill-titles": "tsx src/cli/backfillTitles.ts"
+    "backfill-titles": "tsx src/cli/backfillTitles.ts",
+    "db:start": "npx supabase start",
+    "db:reset": "npx supabase db reset",
+    "db:stop": "npx supabase stop"
   },
   "dependencies": {
     "@levelup/engine": "workspace:*",

@@ -141,12 +141,23 @@ package and run its own `package.json` scripts directly.
 ## Backend
 
 Supabase Postgres + Auth + RLS — schema and policies in `packages/db/supabase/migrations/`,
-consumed via `packages/db`'s service-role client and `apps/web`'s route handlers. **Not yet
-executed against a real Postgres**: this dev environment has no Docker, so the SQL is only
-syntax-validated offline (via `libpg_query`/`pglast`), not run. Run `npx supabase start` +
-`npx supabase db reset` from `packages/db` before trusting it beyond local dev — see
-`packages/db/README.md` for the full local-dev, type-regeneration, seeding, and RLS-test-running
-instructions. Google Sign-In (via a Google Cloud project) is still planned, not yet implemented.
+consumed via `packages/db`'s service-role client and `apps/web`'s route handlers. Applied and
+live against the hosted project (see "Production" below). **This dev environment has no
+Docker**, so a new migration is only syntax-validated offline here (via `libpg_query`/`pglast`)
+before being pushed — see `packages/db/README.md` for the full local-dev, type-regeneration,
+seeding, and test-running instructions. Google Sign-In (via a Google Cloud project) is still
+planned, not yet implemented.
+
+## Production
+
+**The hosted Supabase project (`levelup-dev`, ref `vxtxwqdsickveyjvgcyu`) is PRODUCTION** —
+it's what the real `apps/web` deployment and the EAS production build point at, not a dev/test
+sandbox. Nothing automated touches it: every test suite and `npx supabase start`-based local
+dev flow runs against a local Supabase instead (see `packages/db/README.md`'s "Production
+safety" section for the two guards that enforce this). The only things that legitimately write
+to it are the live app itself, a migration deliberately pushed there, or a CLI script run with
+`CONFIRM_PRODUCTION_WRITE=true`. Full environment/env-var/incident reference:
+`docs/PRODUCTION.md`.
 
 ## Current status and known gaps
 
@@ -170,6 +181,17 @@ everything else complete_quest does), surfaced in the completion response as
 `pnpm --filter @levelup/db backfill-titles <userId>` retroactively awards titles for progress
 made before this shipped.
 
+Also shipped since: distance (GPS-tracked, `lib/runTracking.ts`) and steps (Health Connect,
+`lib/healthConnect.ts`) metric types, both completing with `source: "health"`; local
+notifications (`lib/notifications.ts`) for a daily quest reminder and a streak-at-risk nudge,
+no push server; original app branding (icon/adaptive-icon/splash, app name "LEVEL UP",
+replacing Expo's starter-template defaults); `apps/web`'s `/privacy` and `/terms` pages, linked
+from the app; and a rebuilt Profile tab (`app/(app)/profile/`) — hero (avatar, level, rank,
+join date), quests/XP/streak tiles, equipped-title card linking into Stats, a rank-history list
+derived client-side from the `xp_events` ledger (no new table — see `lib/rankHistory.ts`'s own
+comment for the tradeoff against one), and Settings (daily-reminder toggle, links to
+Notifications/Health Connect/Privacy/Terms, sign out).
+
 Known gaps, mobile:
 
 - `apps/mobile/app/(app)/quests/[id].tsx`: `item.progress` is set into `localProgress` once on
@@ -188,11 +210,12 @@ Known gaps, mobile:
 Known gaps, backend/game-rules:
 
 - `packages/db`'s RLS suite (`rls.test.ts`, `rpc-privileges.test.ts`) and `apps/web`'s route
-  tests that exercise real Supabase calls refuse to run against the hosted project unless
-  `RLS_TEST_ALLOW_REMOTE=true` is set for that invocation (they create/delete real auth users
-  and rows) — and this dev environment has no local Supabase (Docker) to point them at instead.
-  `turbo.json`'s `globalPassThroughEnv` lets plain `RLS_TEST_ALLOW_REMOTE=true pnpm test` pick
-  it up; without it, `pnpm test` only fully exercises `packages/engine` here.
+  tests that exercise real Supabase calls require `SUPABASE_URL` to resolve to a local Supabase
+  instance — they fail loudly (not skip) against any other host, with no opt-in flag, because
+  the hosted project is PRODUCTION (see "Production" below and `docs/PRODUCTION.md`) and these
+  suites create/delete real auth users and rows. This dev environment has no Docker, so
+  `pnpm test` only fully exercises `packages/engine` here; see `packages/db/README.md` for the
+  local-Supabase setup needed to run the rest.
 - **No title-unlocking mechanism evaluates existing titles automatically on a schedule** —
   only on quest completion (`complete_quest()`) or a manual backfill run. A title added to the
   catalog after a player already qualifies for it needs `backfill-titles` run for them (or
@@ -208,18 +231,15 @@ Known gaps, backend/game-rules:
 
 ## Roadmap
 
-Not yet started, roughly in priority order:
+Not yet started:
 
-1. **Notifications and streak reminders** — push/local notifications nudging a player before
-   their streak would lapse. No notification infrastructure exists yet in `apps/mobile`.
-2. **Health Connect and GPS run tracking** — richer quest completion sourced from Android
-   Health Connect and device GPS (e.g. a tracked run), rather than today's
-   manual/checkbox/timer-only completion flow.
-3. **Production readiness**: the app's own branding (icon/splash, replacing Expo's defaults),
-   a privacy-policy page in `apps/web`, and a separate production Supabase project — today
-   there's only the one hosted project, which both serves the app and is the target of the
-   RLS/integration test suites above.
-4. **Mobile type/test infra**: replace the hand-authored `MobileDatabase` type
+1. **Mobile type/test infra**: replace the hand-authored `MobileDatabase` type
    (`apps/mobile/lib/supabase.ts`) with Supabase-generated types, the same way `packages/db`
    already generates its own (see `packages/db/README.md`), and give `apps/mobile` a real test
    runner — today's `test` script is a placeholder (see "Known gaps, mobile" above).
+2. **Google Sign-In** (via a Google Cloud project), wired into both apps' auth layers.
+
+Shipped: notifications, Health Connect + GPS run tracking, original branding, `/privacy` +
+`/terms`, the production decision itself (the hosted project *is* production — see "Production"
+above — rather than a separate project being stood up), and production safety/keep-alive/backup
+tooling (see `docs/PRODUCTION.md`).
