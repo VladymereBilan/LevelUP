@@ -1,0 +1,47 @@
+name: Database backup
+
+# Weekly pg_dump of the production Supabase project (see docs/PRODUCTION.md), GPG-encrypted,
+# uploaded as a private workflow artifact. Needs two repository secrets, set once by a repo
+# admin (never committed — see docs/PRODUCTION.md "Backups" for exactly where to find/create
+# them):
+#   PROD_DATABASE_URL     — the project's direct Postgres connection string (Supabase dashboard
+#                            → Project Settings → Database → Connection string → "URI", the
+#                            non-pooled one, with the database password filled in)
+#   BACKUP_GPG_PASSPHRASE — any strong passphrase, used to symmetrically encrypt the dump; the
+#                            same passphrase is required to decrypt it during a restore
+
+on:
+  schedule:
+    - cron: "0 7 * * 1" # 07:00 UTC every Monday
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL client (pg_dump)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Dump and encrypt
+        env:
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          BACKUP_GPG_PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PROD_DATABASE_URL:-}" ] || [ -z "${BACKUP_GPG_PASSPHRASE:-}" ]; then
+            echo "::error::PROD_DATABASE_URL and/or BACKUP_GPG_PASSPHRASE repository secrets are not set."
+            exit 1
+          fi
+          stamp=$(date -u +%Y%m%d-%H%M%S)
+          pg_dump "$PROD_DATABASE_URL" --no-owner --no-privileges --format=custom \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                  --passphrase "$BACKUP_GPG_PASSPHRASE" \
+                  --output "backup-${stamp}.dump.gpg"
+          echo "BACKUP_FILE=backup-${stamp}.dump.gpg" >> "$GITHUB_ENV"
+
+      - name: Upload encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 90
