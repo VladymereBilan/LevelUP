@@ -4,6 +4,7 @@ import {
   createSignedInTestUser,
   isSupabaseTestEnvConfigured,
   warnSkippingSupabaseTests,
+  type TestUser,
 } from "@levelup/db/testing";
 import type { Database } from "@levelup/db";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -39,9 +40,14 @@ async function callSeed(accessToken: string, body: Record<string, unknown>): Pro
 describe.skipIf(!configured)("POST /api/onboarding/seed", () => {
   let admin: SupabaseClient<Database>;
   const createdUserIds: string[] = [];
+  // Shared by "null templateId" and "unknown templateId": neither seeds any categories for
+  // this user (a null templateId is a no-op, an unknown one is rejected before seeding), so
+  // its category count stays 0 across both — safe to reuse instead of a fresh sign-in each.
+  let scratchUser: TestUser;
 
   beforeAll(async () => {
     admin = await createVerifiedServiceRoleClient(TEST_FILE_LABEL);
+    scratchUser = await newUser("seed-scratch-and-unknown");
   });
 
   afterAll(async () => {
@@ -78,7 +84,7 @@ describe.skipIf(!configured)("POST /api/onboarding/seed", () => {
   });
 
   it("does nothing for a null templateId (start from scratch)", async () => {
-    const a = await newUser("seed-scratch");
+    const a = scratchUser;
 
     const { status, body } = await callSeed(a.accessToken, { templateId: null });
 
@@ -93,7 +99,7 @@ describe.skipIf(!configured)("POST /api/onboarding/seed", () => {
   });
 
   it("rejects an unknown templateId", async () => {
-    const a = await newUser("seed-unknown");
+    const a = scratchUser;
 
     const { status, body } = await callSeed(a.accessToken, { templateId: "tmpl-does-not-exist" });
 

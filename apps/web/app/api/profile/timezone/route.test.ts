@@ -4,6 +4,7 @@ import {
   createSignedInTestUser,
   isSupabaseTestEnvConfigured,
   warnSkippingSupabaseTests,
+  type TestUser,
 } from "@levelup/db/testing";
 import type { Database } from "@levelup/db";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -42,9 +43,14 @@ async function callTimezone(
 describe.skipIf(!configured)("POST /api/profile/timezone", () => {
   let admin: SupabaseClient<Database>;
   const createdUserIds: string[] = [];
+  // Shared by both tests below: a rejected update never writes, so the invalid-zone test
+  // doesn't disturb the valid-zone test's assertion, and it doesn't read the timezone value
+  // itself — safe to reuse one sign-in instead of two.
+  let user: TestUser;
 
   beforeAll(async () => {
     admin = await createVerifiedServiceRoleClient(TEST_FILE_LABEL);
+    user = await newUser("timezone-valid-and-invalid");
   });
 
   afterAll(async () => {
@@ -60,9 +66,7 @@ describe.skipIf(!configured)("POST /api/profile/timezone", () => {
   }
 
   it("sets a valid IANA timezone", async () => {
-    const a = await newUser("timezone-valid");
-
-    const { status, body } = await callTimezone(a.accessToken, { timezone: "Asia/Manila" });
+    const { status, body } = await callTimezone(user.accessToken, { timezone: "Asia/Manila" });
 
     expect(status).toBe(200);
     expect(body).toEqual({ timezone: "Asia/Manila" });
@@ -70,15 +74,13 @@ describe.skipIf(!configured)("POST /api/profile/timezone", () => {
     const { data: profile } = await admin
       .from("profiles")
       .select("timezone")
-      .eq("id", a.user.id)
+      .eq("id", user.user.id)
       .single();
     expect(profile?.timezone).toBe("Asia/Manila");
   });
 
   it("rejects a string that isn't a real IANA zone", async () => {
-    const a = await newUser("timezone-invalid");
-
-    const { status, body } = await callTimezone(a.accessToken, { timezone: "Not/AZone" });
+    const { status, body } = await callTimezone(user.accessToken, { timezone: "Not/AZone" });
 
     expect(status).toBe(400);
     expect(body.error).toBeTypeOf("string");

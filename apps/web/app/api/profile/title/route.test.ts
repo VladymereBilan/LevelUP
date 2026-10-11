@@ -4,6 +4,7 @@ import {
   createSignedInTestUser,
   isSupabaseTestEnvConfigured,
   warnSkippingSupabaseTests,
+  type TestUser,
 } from "@levelup/db/testing";
 import type { Database } from "@levelup/db";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -40,9 +41,16 @@ describe.skipIf(!configured)("POST /api/profile/title", () => {
   let admin: SupabaseClient<Database>;
   const createdUserIds: string[] = [];
   const createdTitleIds: string[] = [];
+  // Shared by "unowned", "unequip", and "bad type" below: a rejection never writes title_id,
+  // "unequip" only cares about the value after its own explicit equip/unequip calls, and "bad
+  // type" is rejected before any write — so starting from whatever the previous test left
+  // behind is always fine. "owned" is kept on its own fresh user because it needs title_id
+  // to still be null before it equips.
+  let sharedUser: TestUser;
 
   beforeAll(async () => {
     admin = await createVerifiedServiceRoleClient(TEST_FILE_LABEL);
+    sharedUser = await newUser("title-equip-unowned-unequip-badtype");
   });
 
   afterAll(async () => {
@@ -103,7 +111,7 @@ describe.skipIf(!configured)("POST /api/profile/title", () => {
   });
 
   it("rejects a title the caller hasn't unlocked", async () => {
-    const a = await newUser("title-equip-unowned");
+    const a = sharedUser;
     const titleId = await newTitle("Title Unowned");
 
     const { status, body } = await callEquip(a.accessToken, { titleId });
@@ -120,7 +128,7 @@ describe.skipIf(!configured)("POST /api/profile/title", () => {
   });
 
   it("unequips with titleId: null", async () => {
-    const a = await newUser("title-unequip");
+    const a = sharedUser;
     const titleId = await newTitle("Title Unequip");
     await grantTitle(a.user.id, titleId);
     await callEquip(a.accessToken, { titleId });
@@ -139,7 +147,7 @@ describe.skipIf(!configured)("POST /api/profile/title", () => {
   });
 
   it("rejects a non-string, non-null titleId", async () => {
-    const a = await newUser("title-equip-bad-type");
+    const a = sharedUser;
 
     const { status, body } = await callEquip(a.accessToken, { titleId: 42 });
 

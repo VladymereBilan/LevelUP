@@ -34,9 +34,18 @@ if (!configured) {
 describe.skipIf(!configured)("RLS policies", () => {
   let admin: SupabaseClient<Database>;
   const createdUserIds: string[] = [];
+  // Every test here is a one-off insert-then-check against synthetic, uniquely-named rows —
+  // none of them depend on cumulative ledger state (XP/stats totals) — so the whole suite
+  // shares 2 signed-in users instead of signing in fresh per test. That's the difference
+  // between ~11 Supabase auth sign-ins and 2 per run, which is what was tripping the
+  // project's auth rate limit when every suite ran concurrently.
+  let a: TestUser;
+  let b: TestUser;
 
   beforeAll(async () => {
     admin = await createVerifiedServiceRoleClient(TEST_FILE_LABEL);
+    a = await newUser("shared-a");
+    b = await newUser("shared-b");
   });
 
   afterAll(async () => {
@@ -52,9 +61,6 @@ describe.skipIf(!configured)("RLS policies", () => {
   }
 
   it("blocks a user from reading another user's profile", async () => {
-    const a = await newUser("profile-a");
-    const b = await newUser("profile-b");
-
     const { data: ownProfile } = await a.client
       .from("profiles")
       .select("id")
@@ -71,22 +77,16 @@ describe.skipIf(!configured)("RLS policies", () => {
   });
 
   it("blocks a client from writing level/xp/rank on profiles directly", async () => {
-    const a = await newUser("profile-write");
-
     const { error } = await a.client.from("profiles").update({ level: 999 }).eq("id", a.user.id);
     expect(error).not.toBeNull();
   });
 
   it("blocks a client from writing stats directly", async () => {
-    const a = await newUser("stats-write");
-
     const { error } = await a.client.from("stats").update({ str: 999 }).eq("user_id", a.user.id);
     expect(error).not.toBeNull();
   });
 
   it("blocks a client from inserting into the xp_events ledger", async () => {
-    const a = await newUser("xp-events-write");
-
     const { error } = await a.client
       .from("xp_events")
       .insert({ user_id: a.user.id, amount: 100, reason: "forged" });
@@ -94,9 +94,6 @@ describe.skipIf(!configured)("RLS policies", () => {
   });
 
   it("lets a user fully manage their own categories but not read another user's", async () => {
-    const a = await newUser("categories-a");
-    const b = await newUser("categories-b");
-
     const { data: created, error: insertError } = await a.client
       .from("categories")
       .insert({
@@ -127,8 +124,6 @@ describe.skipIf(!configured)("RLS policies", () => {
   });
 
   it("lets a user update a quest's progress but not its status", async () => {
-    const a = await newUser("quests-progress");
-
     const { data: category } = await a.client
       .from("categories")
       .insert({ user_id: a.user.id, name: "Study", color: "#3B82F6", icon: "book", stat: "INT" })
@@ -176,8 +171,6 @@ describe.skipIf(!configured)("RLS policies", () => {
   });
 
   it("lets any authenticated user read the titles catalog but not write it", async () => {
-    const a = await newUser("titles-read");
-
     const { data: title, error: seedError } = await admin
       .from("titles")
       .insert({ name: `Test Title ${crypto.randomUUID()}` })
@@ -202,8 +195,6 @@ describe.skipIf(!configured)("RLS policies", () => {
   });
 
   it("blocks a client from inserting into user_titles directly", async () => {
-    const a = await newUser("user-titles-write");
-
     const { data: title } = await admin
       .from("titles")
       .insert({ name: `Test Title ${crypto.randomUUID()}` })
@@ -219,8 +210,6 @@ describe.skipIf(!configured)("RLS policies", () => {
   });
 
   it("blocks a client from writing user_challenges at all", async () => {
-    const a = await newUser("user-challenges-write");
-
     const { data: challenge } = await admin
       .from("challenges")
       .insert({

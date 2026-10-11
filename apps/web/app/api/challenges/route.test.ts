@@ -4,6 +4,7 @@ import {
   createSignedInTestUser,
   isSupabaseTestEnvConfigured,
   warnSkippingSupabaseTests,
+  type TestUser,
 } from "@levelup/db/testing";
 import type { Database } from "@levelup/db";
 import type { Stat } from "@levelup/engine";
@@ -40,9 +41,18 @@ describe.skipIf(!configured)("GET /api/challenges", () => {
   let admin: SupabaseClient<Database>;
   const createdUserIds: string[] = [];
   const createdChallengeIds: string[] = [];
+  // userNearNow is shared by the tests whose windows sit at/around "now" or in the past
+  // (their completions and windows never overlap each other's query window) or whose own
+  // completion predates its window on purpose; userAllStats is kept isolated because its test
+  // counts completions across every stat in an overlapping window, so any leftover row from a
+  // shared user would inflate its count. This cuts the suite from 4 sign-ins to 2.
+  let userNearNow: TestUser;
+  let userAllStats: TestUser;
 
   beforeAll(async () => {
     admin = await createVerifiedServiceRoleClient(TEST_FILE_LABEL);
+    userNearNow = await newUser("challenge-near-now");
+    userAllStats = await newUser("challenge-all-stats");
   });
 
   afterAll(async () => {
@@ -138,7 +148,7 @@ describe.skipIf(!configured)("GET /api/challenges", () => {
   const DAY_MS = 86_400_000;
 
   it("counts only completed quests matching the challenge's stat, inside the active window", async () => {
-    const user = await newUser("challenge-stat-match");
+    const user = userNearNow;
     const focusActivity = await insertActivity(user.user.id, "FOCUS");
     const strActivity = await insertActivity(user.user.id, "STR");
     const now = new Date();
@@ -165,7 +175,7 @@ describe.skipIf(!configured)("GET /api/challenges", () => {
   });
 
   it("counts completed quests of any stat when the challenge's stat is null", async () => {
-    const user = await newUser("challenge-no-stat");
+    const user = userAllStats;
     const focusActivity = await insertActivity(user.user.id, "FOCUS");
     const strActivity = await insertActivity(user.user.id, "STR");
     const now = new Date();
@@ -189,7 +199,7 @@ describe.skipIf(!configured)("GET /api/challenges", () => {
   });
 
   it("is upcoming with zero progress before the window starts, even with matching completions", async () => {
-    const user = await newUser("challenge-upcoming");
+    const user = userNearNow;
     const activityId = await insertActivity(user.user.id, "VIT");
     const now = new Date();
 
@@ -211,7 +221,7 @@ describe.skipIf(!configured)("GET /api/challenges", () => {
   });
 
   it("is completed once the window ends with enough progress, failed otherwise", async () => {
-    const user = await newUser("challenge-ended");
+    const user = userNearNow;
     const activityId = await insertActivity(user.user.id, "AGI");
     const windowStart = new Date(Date.now() - 10 * DAY_MS);
     const windowEnd = new Date(Date.now() - 3 * DAY_MS);
