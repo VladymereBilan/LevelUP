@@ -4,11 +4,13 @@ import {
   calcQuestXp,
   calcStatGain,
   capDailyXp,
+  clampProgressValue,
   DEFAULT_DAILY_XP_CAP,
   getLocalDateString,
   getRank,
   recordStreakCompletion,
   type Difficulty,
+  type MetricType,
   type QuestSource,
   type Stat,
 } from "@levelup/engine";
@@ -22,10 +24,12 @@ const RATE_LIMIT = { endpoint: "quests.complete", maxRequests: 20, windowSeconds
 const STREAK_GRACE_DAYS = 1;
 
 interface ActivityTarget {
-  type: "checkbox" | "minutes" | "reps" | "sets_reps_weight";
+  type: MetricType;
   minutes?: number;
   reps?: number;
   sets?: number;
+  meters?: number;
+  steps?: number;
 }
 
 function defaultProgressFor(target: ActivityTarget): number {
@@ -38,6 +42,10 @@ function defaultProgressFor(target: ActivityTarget): number {
       return target.reps ?? 0;
     case "sets_reps_weight":
       return target.sets ?? 0;
+    case "distance":
+      return target.meters ?? 0;
+    case "steps":
+      return target.steps ?? 0;
   }
 }
 
@@ -84,13 +92,14 @@ export async function POST(
 
   const { data: activity, error: activityError } = await supabase
     .from("activities")
-    .select("difficulty, category_id")
+    .select("difficulty, category_id, metric_type")
     .eq("id", quest.activity_id)
     .maybeSingle();
   if (activityError || !activity) {
     return Response.json({ error: "Quest's activity no longer exists" }, { status: 409 });
   }
   const difficulty = activity.difficulty as Difficulty;
+  const metricType = activity.metric_type as MetricType;
 
   const { data: category, error: categoryError } = await supabase
     .from("categories")
@@ -178,8 +187,13 @@ export async function POST(
     statGain,
   );
 
-  const progress =
-    requestedProgress ?? defaultProgressFor(quest.target as unknown as ActivityTarget);
+  // A client-reported progress value (GPS distance, synced steps, a manual tap) is never
+  // trusted as-is — it's clamped to the metric type's safe ceiling before it's persisted,
+  // the same ceiling @levelup/engine's activity-target validation enforces at creation time.
+  const progress = clampProgressValue(
+    metricType,
+    requestedProgress ?? defaultProgressFor(quest.target as unknown as ActivityTarget),
+  );
 
   let titlesUnlocked: { id: string; name: string; description: string | null }[];
   try {
