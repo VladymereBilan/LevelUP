@@ -4,11 +4,18 @@ name: Database backup
 # uploaded as a private workflow artifact. Needs two repository secrets, set once by a repo
 # admin (never committed — see docs/PRODUCTION.md "Backups" for exactly where to find/create
 # them):
-#   PROD_DATABASE_URL     — the project's direct Postgres connection string (Supabase dashboard
-#                            → Project Settings → Database → Connection string → "URI", the
-#                            non-pooled one, with the database password filled in)
+#   PROD_DATABASE_URL     — the project's Postgres connection string (Supabase dashboard →
+#                            Project Settings → Database → Connection string), with the
+#                            database password filled in
 #   BACKUP_GPG_PASSPHRASE — any strong passphrase, used to symmetrically encrypt the dump; the
 #                            same passphrase is required to decrypt it during a restore
+#
+# pg_dump refuses to run against a server newer than itself, so the client major version
+# installed on the runner must always be >= the server's. Rather than pin a version here (which
+# would silently go stale the next time the hosted project's Postgres is upgraded), the
+# "Install PostgreSQL client" step asks the server what version it is first, then installs that
+# exact major from the official PGDG apt repository (Ubuntu's own repos only ever carry one,
+# often older, major).
 
 on:
   schedule:
@@ -19,8 +26,57 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Install PostgreSQL client (pg_dump)
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install PostgreSQL client (version-matched to server)
+        env:
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${PROD_DATABASE_URL:-}" ]; then
+            echo "::error::PROD_DATABASE_URL repository secret is not set."
+            exit 1
+          fi
+
+          # A stock psql has no server-version gate (unlike pg_dump), so the
+          # distro default is enough just to ask the server what it is.
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+          server_version_num=$(
+            psql "$PROD_DATABASE_URL" -X -q -t -A -c "show server_version_num;" \
+              2>/tmp/psql_err
+          ) || {
+            echo "::error::Failed to query server_version_num (connection or auth problem)."
+            exit 1
+          }
+          server_major=$((server_version_num / 10000))
+          echo "Server major version: ${server_major}"
+
+          # Install the exact matching client from the official PGDG apt repo.
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo tee /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc > /dev/null
+          codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${codename}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y "postgresql-client-${server_major}"
+
+          pg_dump_bin="/usr/lib/postgresql/${server_major}/bin/pg_dump"
+          if [ ! -x "$pg_dump_bin" ]; then
+            echo "::error::Expected ${pg_dump_bin} after installing postgresql-client-${server_major}, but it's missing."
+            exit 1
+          fi
+
+          # Print only the version string — never connection info.
+          "$pg_dump_bin" --version
+          client_major=$("$pg_dump_bin" --version | grep -oE '[0-9]+' | head -n1)
+          if [ "$client_major" -lt "$server_major" ]; then
+            echo "::error::pg_dump major version (${client_major}) is lower than the server's (${server_major})."
+            exit 1
+          fi
+
+          echo "PG_DUMP_BIN=${pg_dump_bin}" >> "$GITHUB_ENV"
 
       - name: Dump and encrypt
         env:
@@ -33,7 +89,7 @@ jobs:
             exit 1
           fi
           stamp=$(date -u +%Y%m%d-%H%M%S)
-          pg_dump "$PROD_DATABASE_URL" --no-owner --no-privileges --format=custom \
+          "$PG_DUMP_BIN" "$PROD_DATABASE_URL" --no-owner --no-privileges --format=custom \
             | gpg --batch --yes --symmetric --cipher-algo AES256 \
                   --passphrase "$BACKUP_GPG_PASSPHRASE" \
                   --output "backup-${stamp}.dump.gpg"
@@ -45,3 +101,30 @@ jobs:
           name: ${{ env.BACKUP_FILE }}
           path: ${{ env.BACKUP_FILE }}
           retention-days: 90
+
+      - name: Verify encrypted backup integrity
+        env:
+          BACKUP_GPG_PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -s "${BACKUP_FILE}" ]; then
+            echo "::error::Encrypted backup artifact ${BACKUP_FILE} is missing or empty."
+            exit 1
+          fi
+
+          # Confirm the passphrase actually decrypts it and the plaintext starts
+          # with pg_dump custom-format's magic header — without ever printing
+          # the decrypted content itself.
+          header=$(
+            gpg --batch --yes --decrypt --passphrase "$BACKUP_GPG_PASSPHRASE" "${BACKUP_FILE}" \
+              2>/tmp/gpg_err | head -c 5
+          ) || {
+            echo "::error::Failed to decrypt the encrypted backup artifact for verification."
+            exit 1
+          }
+          if [ "$header" != "PGDMP" ]; then
+            echo "::error::Decrypted backup does not start with the expected pg_dump header."
+            exit 1
+          fi
+          echo "Encrypted backup verified: non-empty, decrypts, and has the expected pg_dump header."

@@ -90,13 +90,21 @@ Settings → Secrets and variables → Actions → New repository secret):
 
 ### Restoring from a backup
 
+`pg_restore`, like `pg_dump`, refuses to run against a server newer than itself — use a
+`pg_restore` whose major version is **equal to or newer than** the target database's Postgres
+version (check with `psql "<target connection string>" -Atc "show server_version_num;"`, divide
+by 10000 for the major version). The backup workflow installs its matching `pg_dump` from the
+official PGDG apt repo at runtime (see `.github/workflows/backup.yml`) for the same reason — the
+default version `apt`/your OS ships is not guaranteed to be new enough.
+
 ```bash
 # 1. Download the artifact (GitHub Actions run → that backup's artifact) to backup.dump.gpg
 # 2. Decrypt:
 gpg --batch --yes --decrypt --passphrase "<BACKUP_GPG_PASSPHRASE>" \
   --output backup.dump backup.dump.gpg
 # 3. Restore into a target database (NEVER the live production project for a routine test —
-#    see the checklist below):
+#    see the checklist below; the local Supabase instance from `npx supabase start`, packages/db,
+#    is the normal target — its bundled Postgres is already version-matched to production):
 pg_restore --no-owner --no-privileges --clean --if-exists \
   --dbname "<target connection string>" backup.dump
 ```
