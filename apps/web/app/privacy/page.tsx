@@ -76,8 +76,10 @@ export default function PrivacyPolicyPage() {
       <Section title="Data deletion">
         <p>
           To request deletion of your account and all associated data, email{" "}
-          <span className="text-foreground">[support contact email — add before publishing]</span>.
-          We&apos;ll confirm and complete the deletion within a reasonable time. There&apos;s no
+          <a href="mailto:dimmybilan@gmail.com" className="text-violet underline">
+            dimmybilan@gmail.com
+          </a>
+          . We&apos;ll confirm and complete the deletion within a reasonable time. There&apos;s no
           in-app self-serve deletion flow yet.
         </p>
       </Section>
