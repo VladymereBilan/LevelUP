@@ -15,7 +15,17 @@ export function formatProgressLabel(
       return `${progress} / ${target.type === "reps" ? target.reps : 0} reps`;
     case "sets_reps_weight":
       return `${progress} / ${target.type === "sets_reps_weight" ? target.sets : 0} sets`;
+    case "distance":
+      return `${formatMeters(progress)} / ${formatMeters(target.type === "distance" ? target.meters : 0)}`;
+    case "steps":
+      return `${progress} / ${target.type === "steps" ? target.steps : 0} steps`;
   }
+}
+
+function formatMeters(meters: number): string {
+  return meters >= 1000
+    ? `${(meters / 1000).toFixed(meters % 1000 === 0 ? 0 : 1)} km`
+    : `${meters} m`;
 }
 
 function targetDenominator(metricType: MetricType, target: ActivityTarget): number {
@@ -28,6 +38,10 @@ function targetDenominator(metricType: MetricType, target: ActivityTarget): numb
       return target.type === "reps" ? target.reps : 1;
     case "sets_reps_weight":
       return target.type === "sets_reps_weight" ? target.sets : 1;
+    case "distance":
+      return target.type === "distance" ? target.meters : 1;
+    case "steps":
+      return target.type === "steps" ? target.steps : 1;
   }
 }
 
