@@ -14,13 +14,25 @@ import {
 } from "../../../lib/questBoard";
 import { completeQuest, type QuestCompleteResult } from "../../../lib/quests";
 import { formatProgressLabel, progressPercent } from "../../../lib/questFormat";
+import {
+  requestLocationPermission,
+  startRunTracking,
+  type RunTracker,
+} from "../../../lib/runTracking";
 import { colors, fonts, gradient } from "../../../theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
 
 function targetStepCount(item: QuestBoardItem): number {
   if (item.target.type === "reps") return item.target.reps;
   if (item.target.type === "sets_reps_weight") return item.target.sets;
+  if (item.target.type === "steps") return item.target.steps;
   return 1;
+}
+
+/** How much the +/- stepper moves per tap — steps are counted in the hundreds, everything
+ * else here (reps, sets) one at a time. */
+function stepDelta(item: QuestBoardItem): number {
+  return item.metricType === "steps" ? 100 : 1;
 }
 
 function formatClock(totalSeconds: number): string {
@@ -44,6 +56,11 @@ export default function QuestDetailScreen() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [runTracking, setRunTracking] = useState(false);
+  const [runMeters, setRunMeters] = useState(0);
+  const [runError, setRunError] = useState<string | null>(null);
+  const runTrackerRef = useRef<RunTracker | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,6 +94,7 @@ export default function QuestDetailScreen() {
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      runTrackerRef.current?.stop().catch(() => {});
     };
   }, []);
 
@@ -118,6 +136,26 @@ export default function QuestDetailScreen() {
     setElapsedSeconds((seconds) => seconds % 60);
   }
 
+  async function startRun() {
+    setRunError(null);
+    const granted = await requestLocationPermission();
+    if (!granted) {
+      setRunError("Location permission is required to track a run.");
+      return;
+    }
+    runTrackerRef.current = await startRunTracking((meters) => setRunMeters(meters));
+    setRunTracking(true);
+  }
+
+  async function stopRun() {
+    if (!runTrackerRef.current) return;
+    const finalMeters = await runTrackerRef.current.stop();
+    runTrackerRef.current = null;
+    setRunTracking(false);
+    setRunMeters(finalMeters);
+    persistProgress(Math.round(finalMeters));
+  }
+
   async function handleComplete() {
     if (!item) return;
     setCompleting(true);
@@ -138,8 +176,21 @@ export default function QuestDetailScreen() {
       setElapsedSeconds((seconds) => seconds % 60);
     }
 
+    // Same flush pattern for an active run: Stop Run already persists it, but completing
+    // mid-run has to flush the live total here too, or distance since the last stop is lost.
+    if (runTrackerRef.current) {
+      const finalMeters = await runTrackerRef.current.stop();
+      runTrackerRef.current = null;
+      setRunTracking(false);
+      finalProgress = Math.round(finalMeters);
+      setLocalProgress(finalProgress);
+    }
+
     try {
-      const result = await completeQuest(item.questId, { progress: finalProgress });
+      const result = await completeQuest(item.questId, {
+        progress: finalProgress,
+        ...(item.metricType === "distance" ? { source: "health" as const } : {}),
+      });
       invalidateQuestBoardCache();
       setCompleteResult(result);
       setShowCompleteModal(true);
@@ -292,7 +343,9 @@ export default function QuestDetailScreen() {
           </View>
         ) : null}
 
-        {item.metricType === "reps" || item.metricType === "sets_reps_weight" ? (
+        {item.metricType === "reps" ||
+        item.metricType === "sets_reps_weight" ||
+        item.metricType === "steps" ? (
           <View style={{ alignItems: "center", gap: 16, paddingVertical: 12 }}>
             {item.target.type === "sets_reps_weight" ? (
               <Text style={{ color: colors.muted, fontSize: 11 }}>
@@ -302,7 +355,7 @@ export default function QuestDetailScreen() {
             ) : null}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
               <Pressable
-                onPress={() => adjustStep(-1, targetStepCount(item))}
+                onPress={() => adjustStep(-stepDelta(item), targetStepCount(item))}
                 disabled={alreadyCompleted}
                 style={{
                   width: 44,
@@ -328,7 +381,7 @@ export default function QuestDetailScreen() {
                 {localProgress}
               </Text>
               <Pressable
-                onPress={() => adjustStep(1, targetStepCount(item))}
+                onPress={() => adjustStep(stepDelta(item), targetStepCount(item))}
                 disabled={alreadyCompleted}
                 style={{
                   width: 44,
@@ -343,6 +396,27 @@ export default function QuestDetailScreen() {
                 <Icon name="plus" size={18} color={colors.violetLight} />
               </Pressable>
             </View>
+          </View>
+        ) : null}
+
+        {item.metricType === "distance" ? (
+          <View style={{ alignItems: "center", gap: 16, paddingVertical: 12 }}>
+            <Text style={{ color: colors.text, fontFamily: fonts.displayBold, fontSize: 36 }}>
+              {(runMeters / 1000).toFixed(2)} km
+            </Text>
+            <Button
+              variant="secondary"
+              icon={runTracking ? "pause" : "play"}
+              onPress={() => void (runTracking ? stopRun() : startRun())}
+              disabled={alreadyCompleted}
+            >
+              {runTracking ? "Stop Run" : "Start Run"}
+            </Button>
+            {runError ? (
+              <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>
+                {runError}
+              </Text>
+            ) : null}
           </View>
         ) : null}
 

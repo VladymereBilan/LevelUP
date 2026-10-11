@@ -3,9 +3,11 @@ import { Text, TextInput, View } from "react-native";
 import {
   calcQuestXp,
   isSafeActivityTarget,
+  MAX_DISTANCE_METERS,
   MAX_MINUTES_TARGET,
   MAX_REPS_TARGET,
   MAX_SETS_TARGET,
+  MAX_STEPS_TARGET,
   MAX_WEIGHT_KG,
   STATS,
   getLocalDateString,
@@ -28,6 +30,8 @@ const METRIC_OPTIONS: { value: MetricType; label: string }[] = [
   { value: "minutes", label: "Minutes" },
   { value: "reps", label: "Reps" },
   { value: "sets_reps_weight", label: "Sets x Reps" },
+  { value: "distance", label: "Distance" },
+  { value: "steps", label: "Steps" },
 ];
 
 const SCHEDULE_OPTIONS: { value: Schedule["kind"]; label: string }[] = [
@@ -54,6 +58,10 @@ function defaultTargetFor(metricType: MetricType): ActivityTarget {
       return { type: "reps", reps: 10 };
     case "sets_reps_weight":
       return { type: "sets_reps_weight", sets: 3, reps: 10 };
+    case "distance":
+      return { type: "distance", meters: 2000 };
+    case "steps":
+      return { type: "steps", steps: 5000 };
   }
 }
 
@@ -85,8 +93,7 @@ export interface ActivityFormInitialValues {
 }
 
 export type ActivityFormCategorySelection =
-  | { kind: "existing"; categoryId: string }
-  | { kind: "new"; input: CreateCategoryInput };
+  { kind: "existing"; categoryId: string } | { kind: "new"; input: CreateCategoryInput };
 
 export interface ActivityFormValues {
   category: ActivityFormCategorySelection;
@@ -197,13 +204,16 @@ export function ActivityForm({
         ? `Reps must be between 1 and ${MAX_REPS_TARGET}.`
         : target.type === "sets_reps_weight"
           ? `Sets (1-${MAX_SETS_TARGET}), reps (1-${MAX_REPS_TARGET}), and weight (0-${MAX_WEIGHT_KG}kg) must be in range.`
-          : null;
+          : target.type === "distance"
+            ? `Distance must be between 1 and ${MAX_DISTANCE_METERS / 1000} km.`
+            : target.type === "steps"
+              ? `Steps must be between 1 and ${MAX_STEPS_TARGET}.`
+              : null;
 
   const scheduleError =
     scheduleKind === "weekdays" && weekdays.length === 0 ? "Pick at least one day." : null;
 
-  const canSubmit =
-    !submitting && !nameError && !categoryError && targetValid && !scheduleError;
+  const canSubmit = !submitting && !nameError && !categoryError && targetValid && !scheduleError;
 
   const xpPreview = useMemo(
     () => calcQuestXp({ difficulty, source: "manual", streakDays }),
@@ -385,6 +395,24 @@ export function ActivityForm({
             suffix="reps"
             onChange={(reps) => setTarget({ type: "reps", reps })}
           />
+        ) : target.type === "distance" ? (
+          <Stepper
+            value={target.meters / 1000}
+            min={0.5}
+            max={MAX_DISTANCE_METERS / 1000}
+            step={0.5}
+            suffix="km"
+            onChange={(km) => setTarget({ type: "distance", meters: Math.round(km * 1000) })}
+          />
+        ) : target.type === "steps" ? (
+          <Stepper
+            value={target.steps}
+            min={500}
+            max={MAX_STEPS_TARGET}
+            step={500}
+            suffix="steps"
+            onChange={(steps) => setTarget({ type: "steps", steps })}
+          />
         ) : (
           <View style={{ gap: 16 }}>
             <View style={{ gap: 6 }}>
@@ -456,7 +484,9 @@ export function ActivityForm({
           <View style={{ gap: 6 }}>
             <Text style={{ color: colors.muted, fontSize: 10 }}>Days from today</Text>
             <Stepper value={oneOffOffset} min={0} max={365} onChange={setOneOffOffset} />
-            <Text style={{ color: colors.muted, fontSize: 11 }}>{offsetFromToday(oneOffOffset)}</Text>
+            <Text style={{ color: colors.muted, fontSize: 11 }}>
+              {offsetFromToday(oneOffOffset)}
+            </Text>
           </View>
         ) : null}
         {fieldError(scheduleError)}
@@ -474,7 +504,9 @@ export function ActivityForm({
             />
           ))}
         </View>
-        <Text style={{ color: colors.violetLight, fontFamily: fonts.displaySemiBold, fontSize: 13 }}>
+        <Text
+          style={{ color: colors.violetLight, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+        >
           +{xpPreview} XP per completion
         </Text>
       </View>

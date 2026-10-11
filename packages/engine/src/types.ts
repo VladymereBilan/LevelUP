@@ -10,7 +10,8 @@ export const STATS: readonly Stat[] = ["STR", "AGI", "VIT", "INT", "FOCUS"];
 
 export type Rank = "E" | "D" | "C" | "B" | "A" | "S";
 
-export type MetricType = "checkbox" | "minutes" | "reps" | "sets_reps_weight";
+export type MetricType =
+  "checkbox" | "minutes" | "reps" | "sets_reps_weight" | "distance" | "steps";
 
 export type Difficulty = "easy" | "normal" | "hard";
 
@@ -32,7 +33,9 @@ export type ActivityTarget =
   | { type: "checkbox" }
   | { type: "minutes"; minutes: number }
   | { type: "reps"; reps: number }
-  | { type: "sets_reps_weight"; sets: number; reps: number; weightKg?: number };
+  | { type: "sets_reps_weight"; sets: number; reps: number; weightKg?: number }
+  | { type: "distance"; meters: number }
+  | { type: "steps"; steps: number };
 
 /** User-defined grouping that maps to exactly one fixed stat. */
 export interface Category {
