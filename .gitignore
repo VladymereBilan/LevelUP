@@ -15,6 +15,17 @@ build/
 .env.local
 .env.*.local
 
+# credentials — Google Play service account keys for `eas submit`. Prefer storing the key
+# outside the repo entirely and uploading it to EAS; these patterns are the second line of
+# defense, with .githooks/pre-commit as the third.
+*service-account*.json
+*-key.json
+google-services.json
+*.pem
+*.p12
+*.jks
+*.keystore
+
 # logs
 *.log
 npm-debug.log*

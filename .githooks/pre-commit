@@ -2,8 +2,9 @@
 
 /**
  * Blocks a commit if any staged file contains a JWT-looking string
- * (eyJ...) or a Supabase "sb_secret" key, outside the files meant to hold
- * real local secrets (.env, .env.local, .env.*.local — all gitignored).
+ * (eyJ...), a Supabase "sb_secret" key, a PEM private key block, or a
+ * Google service account key, outside the files meant to hold real local
+ * secrets (.env, .env.local, .env.*.local — all gitignored).
  *
  * .env.example is deliberately NOT exempt: it's a tracked template meant
  * to hold only blank placeholders. This hook exists because a real anon
@@ -22,6 +23,12 @@ import path from "node:path";
 
 const JWT_PATTERN = /eyJ[A-Za-z0-9_-]{10,}/;
 const SB_SECRET_PATTERN = /sb_secret_[A-Za-z0-9_-]+/;
+// A Google Cloud service account key (the JSON `eas submit` needs to upload builds to Play)
+// contains neither of the two patterns above, so nothing here would have caught one. It is a
+// PEM private key wrapped in JSON — match both the key block and the JSON marker, since a
+// credential can arrive as a raw .pem too.
+const PRIVATE_KEY_PATTERN = /-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----/;
+const SERVICE_ACCOUNT_PATTERN = /"type"\s*:\s*"service_account"/;
 
 // Matches .env, .env.local, .env.production.local, etc. — NOT .env.example
 // (or anything else whose last segment isn't literally "local").
@@ -64,6 +71,18 @@ function findViolations(filePath, content) {
     }
     if (SB_SECRET_PATTERN.test(line)) {
       violations.push(`${filePath}:${index + 1}: looks like a Supabase secret key (sb_secret_...)`);
+    }
+    if (PRIVATE_KEY_PATTERN.test(line)) {
+      violations.push(
+        `${filePath}:${index + 1}: looks like a private key block (-----BEGIN ... PRIVATE KEY-----)`,
+      );
+    }
+    if (SERVICE_ACCOUNT_PATTERN.test(line)) {
+      // Worded to avoid the literal this pattern matches — an earlier version of this
+      // message contained it and the hook blocked its own commit.
+      violations.push(
+        `${filePath}:${index + 1}: looks like a Google service account key (JSON type field)`,
+      );
     }
   });
 
