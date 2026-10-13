@@ -17,6 +17,7 @@ import { explainQuestXp, type QuestSource } from "@levelup/engine";
 import { XpBreakdownSheet } from "../../../components/XpBreakdownSheet";
 import { useSession } from "../../../lib/AuthProvider";
 import { getMyStreak } from "../../../lib/streaks";
+import { progressTick } from "../../../lib/haptics";
 import {
   acceptDailyReminderOffer,
   declineDailyReminderOffer,
@@ -145,11 +146,16 @@ export default function QuestDetailScreen() {
   }
 
   function toggleDone() {
+    progressTick();
     persistProgress(localProgress >= 1 ? 0 : 1);
   }
 
   function adjustStep(delta: number, max: number) {
-    persistProgress(Math.max(0, Math.min(max, localProgress + delta)));
+    const next = Math.max(0, Math.min(max, localProgress + delta));
+    // Only on an actual change: a stepper pinned at its floor or ceiling should feel inert
+    // rather than buzz at every futile tap.
+    if (next !== localProgress) progressTick();
+    persistProgress(next);
   }
 
   function startTimer() {
