@@ -1,0 +1,125 @@
+name: CI
+
+# Runs on every push to main and every pull request. This exists because two test files sat
+# permanently broken in this repo without anyone noticing — apps/web's health route test could
+# never pass (it calls the handler directly, where next/server's connection() has no request
+# scope), and the real-DB suites couldn't run at all from the repo root because turbo's strict
+# env mode stripped SUPABASE_* before vitest saw them. Both were only found when someone ran
+# them by hand for the first time. `pnpm format:check` had likewise been red for a while.
+# Nothing was watching, so nothing was known.
+#
+# Two jobs, deliberately split:
+#
+# `static` needs no Docker and finishes in a couple of minutes — fast feedback on the things
+# that break most often. It would NOT have caught either bug above; both suites were green
+# here the whole time. It earns its place by keeping the cheap checks honest, not by having
+# caught anything historically.
+#
+# `database` is the one that would have. The suites it runs create real auth users, sign them
+# in, and call server-only RPCs, so a bare `postgres:` service container is not enough — they
+# need GoTrue and PostgREST too. That means booting the actual Supabase stack via the CLI
+# rather than wiring up service containers by hand. It costs a few minutes of image pulls per
+# run, which is the price of testing the thing that actually ships.
+#
+# No production credentials are available to either job, and none are needed: the suites refuse
+# any non-local SUPABASE_URL via packages/db's isLocalSupabaseHost guard, with no opt-in flag
+# (see packages/db/README.md "Production safety"). The keys below come from the throwaway stack
+# this workflow boots and are worthless anywhere else — they're masked anyway, so a future
+# `set -x` or a failing step can't print them into a public log.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to the same branch makes the first run's result irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: Lint, types, format, engine tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No version pinned: the action reads packageManager from package.json, so this can
+      # never drift from what the repo actually uses.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      # Catches the drift that had accumulated here unnoticed. Worth knowing if this ever fails
+      # and `pnpm format` doesn't fix it: prettier needed two passes to converge on
+      # docs/PRODUCTION.md, so run it twice before assuming the file is the problem.
+      - run: pnpm format:check
+
+      - run: pnpm --filter @levelup/engine test
+
+  database:
+    name: Real-DB suites (local Supabase)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        working-directory: packages/db
+        run: supabase start
+
+      # `supabase start` applies migrations itself, but a reset is what a developer runs and
+      # what packages/db/README.md documents — keep CI on the same path rather than a subtly
+      # different one.
+      - name: Apply migrations
+        working-directory: packages/db
+        run: supabase db reset
+
+      # The suites read SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY; the CLI
+      # reports them under different names. Masked before being exported so they never surface
+      # in logs. These three must also stay declared in turbo.json's `test` task `env` or a
+      # root `pnpm test` will not see them — turbo runs tasks in strict env mode.
+      - name: Export Supabase env
+        working-directory: packages/db
+        run: |
+          set -euo pipefail
+          supabase status -o env > /tmp/supabase.env
+          get() { grep -E "^$1=" /tmp/supabase.env | head -1 | cut -d= -f2- | tr -d '"'; }
+          url=$(get API_URL)
+          anon=$(get ANON_KEY)
+          service=$(get SERVICE_ROLE_KEY)
+          for v in "$anon" "$service"; do echo "::add-mask::$v"; done
+          {
+            echo "SUPABASE_URL=$url"
+            echo "SUPABASE_ANON_KEY=$anon"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$service"
+          } >> "$GITHUB_ENV"
+          echo "Supabase URL: $url"
+
+      # The full root command rather than per-package filters: it is what a developer types,
+      # and it is the only thing that exercises turbo's env passthrough end to end.
+      - run: pnpm test
