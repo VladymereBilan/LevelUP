@@ -66,7 +66,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
@@ -76,7 +76,10 @@ export default function RootLayout() {
     SpaceGrotesk_700Bold,
   });
 
-  if (!fontsLoaded) {
+  // Render with the system font rather than hanging on the splash spinner if
+  // the bundled faces fail to load — a broken font is a cosmetic problem, a
+  // permanently loading app is not.
+  if (!fontsLoaded && !fontError) {
     return <LoadingScreen />;
   }
 

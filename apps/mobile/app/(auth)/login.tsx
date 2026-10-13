@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as WebBrowser from "expo-web-browser";
 import { Icon } from "../../components/Icon";
 import { Logo } from "../../components/Logo";
 import { Button } from "../../components/Button";
 import { signInWithGoogle } from "../../lib/auth";
 import { colors } from "../../theme/tokens";
+
+// Both pages live in apps/web, the same origin the API routes are served from.
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
 export default function LoginScreen() {
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -25,6 +29,11 @@ export default function LoginScreen() {
     } finally {
       setIsSigningIn(false);
     }
+  }
+
+  function openUrl(path: string) {
+    if (!API_URL) return;
+    void WebBrowser.openBrowserAsync(`${API_URL}${path}`);
   }
 
   return (
@@ -93,9 +102,19 @@ export default function LoginScreen() {
             }}
           >
             By continuing, you agree to our{" "}
-            <Text style={{ color: colors.muted, textDecorationLine: "underline" }}>Terms</Text> and
-            acknowledge our{" "}
-            <Text style={{ color: colors.muted, textDecorationLine: "underline" }}>
+            <Text
+              onPress={() => openUrl("/terms")}
+              suppressHighlighting
+              style={{ color: colors.muted, textDecorationLine: "underline" }}
+            >
+              Terms
+            </Text>{" "}
+            and acknowledge our{" "}
+            <Text
+              onPress={() => openUrl("/privacy")}
+              suppressHighlighting
+              style={{ color: colors.muted, textDecorationLine: "underline" }}
+            >
               Privacy Policy
             </Text>
             .

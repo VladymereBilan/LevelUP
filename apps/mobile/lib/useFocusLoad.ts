@@ -19,9 +19,14 @@ export function useFocusLoad(load: (mode: LoadMode) => Promise<void>) {
       async function run() {
         const mode: LoadMode = isFirstFocus.current ? "initial" : "silent";
         if (mode === "initial") setLoading(true);
-        await load(mode);
-        isFirstFocus.current = false;
-        if (mode === "initial") setLoading(false);
+        try {
+          await load(mode);
+        } finally {
+          // A `load` that throws instead of setting its own error state would
+          // otherwise leave the screen on its spinner forever.
+          isFirstFocus.current = false;
+          if (mode === "initial") setLoading(false);
+        }
       }
       void run();
     }, [load]),
@@ -29,8 +34,11 @@ export function useFocusLoad(load: (mode: LoadMode) => Promise<void>) {
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    await load("refresh");
-    setRefreshing(false);
+    try {
+      await load("refresh");
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   return { loading, refreshing, refresh };

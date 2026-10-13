@@ -30,18 +30,23 @@ async function bootstrapSession(): Promise<void> {
  */
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { session } = useSession();
+  // Keyed on the user id, not the session object: supabase-js hands
+  // onAuthStateChange a brand-new Session on every TOKEN_REFRESHED (roughly
+  // hourly, and on resume), and re-running this effect for the same user
+  // would drop the app back to the root layout's loading spinner and lose
+  // whatever screen they were on.
+  const userId = session?.user.id ?? null;
   const [status, setStatus] = useState<OnboardingStatus>("loading");
 
   useEffect(() => {
     let isMounted = true;
 
     async function run() {
-      if (!session) {
+      if (!userId) {
         setStatus("loading");
         return;
       }
 
-      const userId = session.user.id;
       setStatus("loading");
 
       try {
@@ -68,7 +73,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, [session]);
+  }, [userId]);
 
   function completeOnboarding() {
     setStatus("loading");

@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon, type IconName } from "../../components/Icon";
+import { Button } from "../../components/Button";
 import { listChallenges, type ChallengeRow, type ChallengeStatus } from "../../lib/challenges";
 import { useFocusLoad } from "../../lib/useFocusLoad";
 import { colors, fonts, gradient } from "../../theme/tokens";
@@ -114,11 +115,20 @@ export default function ChallengesScreen() {
           alignItems: "center",
           justifyContent: "center",
           padding: 24,
+          gap: 16,
         }}
       >
         <Text style={{ color: colors.danger, fontSize: 14, textAlign: "center" }}>
           {error ?? "Something went wrong."}
         </Text>
+        <Button
+          variant="secondary"
+          icon="arrow"
+          loading={refreshing}
+          onPress={() => void refresh()}
+        >
+          Try again
+        </Button>
       </SafeAreaView>
     );
   }

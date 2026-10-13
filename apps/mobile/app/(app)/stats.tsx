@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BarChart } from "../../components/BarChart";
 import { Heatmap } from "../../components/Heatmap";
 import { Icon } from "../../components/Icon";
+import { Button } from "../../components/Button";
 import { RadarChart } from "../../components/RadarChart";
 import { RankChip } from "../../components/RankChip";
 import { StreakChip } from "../../components/StreakChip";
@@ -113,11 +114,20 @@ export default function StatsScreen() {
           alignItems: "center",
           justifyContent: "center",
           padding: 24,
+          gap: 16,
         }}
       >
         <Text style={{ color: colors.danger, fontSize: 14, textAlign: "center" }}>
           {error ?? "Something went wrong."}
         </Text>
+        <Button
+          variant="secondary"
+          icon="arrow"
+          loading={refreshing}
+          onPress={() => void refresh()}
+        >
+          Try again
+        </Button>
       </SafeAreaView>
     );
   }

@@ -1,4 +1,4 @@
-import type { ActivityTarget, MetricType } from "@levelup/engine";
+import type { ActivityTarget, MetricType, QuestSource } from "@levelup/engine";
 import type { IconName } from "../components/Icon";
 
 /** Up to 2 letters for an avatar — first letter of each word in a multi-word username, or
@@ -10,6 +10,17 @@ export function initials(username: string): string {
     .map((part) => part[0])
     .filter((letter): letter is string => Boolean(letter));
   return (letters.slice(0, 2).join("") || username.slice(0, 2)).toUpperCase();
+}
+
+/** Which XP source multiplier a completion from the quest detail screen earns — the screen
+ * offers exactly one control per metric type, so the metric type is what decides it: a
+ * GPS-tracked run is "health", a stopwatch-tracked session is "timer", a tap is "manual".
+ * Steps are "manual" here because this screen's control is the +/- stepper; a Health
+ * Connect sync completes with "health" from the Health Connect screen instead. */
+export function questSourceForMetric(metricType: MetricType): QuestSource {
+  if (metricType === "distance") return "health";
+  if (metricType === "minutes") return "timer";
+  return "manual";
 }
 
 export function formatProgressLabel(

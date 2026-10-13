@@ -93,8 +93,10 @@ export async function applyNotificationSchedule(prefs: NotificationPrefs): Promi
     await Notifications.scheduleNotificationAsync({
       identifier: STREAK_REMINDER_ID,
       content: {
-        title: "Streak at Risk",
-        body: "You haven't completed a quest today — finish one before the day resets.",
+        title: "Streak Check",
+        // A fixed daily local trigger can't know whether today's quests are already done,
+        // so this can't claim they aren't — it fires for finished players too.
+        body: "The day's almost over. Make sure a quest is logged to keep your streak alive.",
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,

@@ -13,7 +13,11 @@ import {
   type QuestBoardItem,
 } from "../../../lib/questBoard";
 import { completeQuest, type QuestCompleteResult } from "../../../lib/quests";
-import { formatProgressLabel, progressPercent } from "../../../lib/questFormat";
+import {
+  formatProgressLabel,
+  progressPercent,
+  questSourceForMetric,
+} from "../../../lib/questFormat";
 import {
   requestLocationPermission,
   startRunTracking,
@@ -61,6 +65,10 @@ export default function QuestDetailScreen() {
   const [runMeters, setRunMeters] = useState(0);
   const [runError, setRunError] = useState<string | null>(null);
   const runTrackerRef = useRef<RunTracker | null>(null);
+  // A tracker always counts from zero, so distance already banked on this quest (an earlier
+  // run today, or a run before the app was reopened) has to be added back on top of it —
+  // otherwise starting a second run would replace the first one's distance instead of adding.
+  const runBaselineRef = useRef(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,6 +85,7 @@ export default function QuestDetailScreen() {
         }
         setItem(detail);
         setLocalProgress(detail.progress);
+        setRunMeters(detail.progress);
       } catch (err) {
         if (isMounted) setError(err instanceof Error ? err.message : "Failed to load quest.");
       } finally {
@@ -143,13 +152,16 @@ export default function QuestDetailScreen() {
       setRunError("Location permission is required to track a run.");
       return;
     }
-    runTrackerRef.current = await startRunTracking((meters) => setRunMeters(meters));
+    runBaselineRef.current = localProgress;
+    runTrackerRef.current = await startRunTracking((meters) =>
+      setRunMeters(runBaselineRef.current + meters),
+    );
     setRunTracking(true);
   }
 
   async function stopRun() {
     if (!runTrackerRef.current) return;
-    const finalMeters = await runTrackerRef.current.stop();
+    const finalMeters = runBaselineRef.current + (await runTrackerRef.current.stop());
     runTrackerRef.current = null;
     setRunTracking(false);
     setRunMeters(finalMeters);
@@ -179,17 +191,19 @@ export default function QuestDetailScreen() {
     // Same flush pattern for an active run: Stop Run already persists it, but completing
     // mid-run has to flush the live total here too, or distance since the last stop is lost.
     if (runTrackerRef.current) {
-      const finalMeters = await runTrackerRef.current.stop();
+      const finalMeters = runBaselineRef.current + (await runTrackerRef.current.stop());
       runTrackerRef.current = null;
       setRunTracking(false);
       finalProgress = Math.round(finalMeters);
+      setRunMeters(finalMeters);
       setLocalProgress(finalProgress);
     }
 
     try {
+      const source = questSourceForMetric(item.metricType);
       const result = await completeQuest(item.questId, {
         progress: finalProgress,
-        ...(item.metricType === "distance" ? { source: "health" as const } : {}),
+        ...(source === "manual" ? {} : { source }),
       });
       invalidateQuestBoardCache();
       setCompleteResult(result);

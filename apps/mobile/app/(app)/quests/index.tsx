@@ -21,7 +21,12 @@ import {
 } from "../../../lib/questBoard";
 import { generateQuests } from "../../../lib/quests";
 import { getMyStreak } from "../../../lib/streaks";
-import { formatProgressLabel, getCategoryIcon, progressPercent } from "../../../lib/questFormat";
+import {
+  formatProgressLabel,
+  getCategoryIcon,
+  progressPercent,
+  questSourceForMetric,
+} from "../../../lib/questFormat";
 import { useFocusLoad, type LoadMode } from "../../../lib/useFocusLoad";
 import { colors, fonts } from "../../../theme/tokens";
 
@@ -191,7 +196,9 @@ export default function QuestsScreen() {
               Choose a template to start with ready-made quests, or build your own.
             </Text>
             {error ? (
-              <Text style={{ color: colors.danger, fontSize: 11, textAlign: "center" }}>{error}</Text>
+              <Text style={{ color: colors.danger, fontSize: 11, textAlign: "center" }}>
+                {error}
+              </Text>
             ) : null}
             <View style={{ width: "100%", gap: 10, marginTop: 6 }}>
               {STARTER_TEMPLATE_OPTIONS.map((template) => (
@@ -248,7 +255,7 @@ export default function QuestsScreen() {
               {group.items.map((item) => {
                 const xp = calcQuestXp({
                   difficulty: item.difficulty,
-                  source: "manual",
+                  source: questSourceForMetric(item.metricType),
                   streakDays,
                 });
                 return (

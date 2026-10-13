@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { xpToNext, STATS } from "@levelup/engine";
@@ -61,7 +61,7 @@ export default function HomeScreen() {
     }
   }, [session]);
 
-  const { loading } = useFocusLoad(load);
+  const { loading, refreshing, refresh } = useFocusLoad(load);
 
   if (loading) {
     return (
@@ -87,11 +87,20 @@ export default function HomeScreen() {
           alignItems: "center",
           justifyContent: "center",
           padding: 24,
+          gap: 16,
         }}
       >
         <Text style={{ color: colors.danger, fontSize: 14, textAlign: "center" }}>
           {error ?? "Something went wrong."}
         </Text>
+        <Button
+          variant="secondary"
+          icon="arrow"
+          loading={refreshing}
+          onPress={() => void refresh()}
+        >
+          Try again
+        </Button>
       </SafeAreaView>
     );
   }
@@ -108,7 +117,16 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 28, gap: 4 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 28, gap: 4 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refresh()}
+            tintColor={colors.violet}
+          />
+        }
+      >
         <View className="mb-5 flex-row items-center justify-between">
           <View className="flex-row items-center gap-2.5">
             <View

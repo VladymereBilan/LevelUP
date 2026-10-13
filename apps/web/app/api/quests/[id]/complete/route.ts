@@ -141,6 +141,16 @@ export async function POST(
   const now = new Date();
   const localDate = getLocalDateString(now, profile.timezone);
 
+  // A player who flies west, or whose device clock/timezone moves backwards, can report a
+  // local date *earlier* than their last recorded completion — which recordStreakCompletion
+  // rejects outright. Treat it as another completion on the already-recorded day (the
+  // same-day no-op) rather than letting it throw and 500 every completion until the
+  // calendar catches up.
+  const streakDate =
+    streak.last_completed_date && localDate < streak.last_completed_date
+      ? streak.last_completed_date
+      : localDate;
+
   const newStreak = recordStreakCompletion(
     {
       current: streak.current,
@@ -148,7 +158,7 @@ export async function POST(
       lastCompletedDate: streak.last_completed_date,
       graceDaysUsed: streak.grace_days_used,
     },
-    localDate,
+    streakDate,
     STREAK_GRACE_DAYS,
   );
 

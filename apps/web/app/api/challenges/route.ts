@@ -98,12 +98,13 @@ export async function GET(request: Request): Promise<Response> {
             (challengeStat === null || c.stat === challengeStat),
         ).length;
 
+    const met = progress >= challenge.target_value;
     const status: ChallengeStatus = upcoming
       ? "upcoming"
-      : nowMs <= endsAtMs
-        ? "active"
-        : progress >= challenge.target_value
-          ? "completed"
+      : met
+        ? "completed"
+        : nowMs <= endsAtMs
+          ? "active"
           : "failed";
 
     return {
