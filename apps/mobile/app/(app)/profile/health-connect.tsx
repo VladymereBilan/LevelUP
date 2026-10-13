@@ -198,13 +198,17 @@ export default function HealthConnectScreen() {
                       </View>
                       <Pressable
                         onPress={() => void syncQuest(item, progress)}
-                        disabled={syncingQuestId === item.questId || progress <= 0}
+                        // Every Sync button is disabled while any one of them is in flight:
+                        // two overlapping completions each compute the player's new XP from
+                        // the same pre-completion profile row, so the second write would
+                        // silently overwrite the first one's award.
+                        disabled={syncingQuestId !== null || progress <= 0}
                         style={{
                           paddingHorizontal: 14,
                           paddingVertical: 8,
                           borderRadius: 10,
                           backgroundColor: "rgba(124,58,237,0.16)",
-                          opacity: progress <= 0 ? 0.5 : 1,
+                          opacity: syncingQuestId !== null || progress <= 0 ? 0.5 : 1,
                         }}
                       >
                         {syncingQuestId === item.questId ? (

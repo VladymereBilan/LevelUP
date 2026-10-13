@@ -14,9 +14,7 @@ export interface TitleDisplay {
 }
 
 /** Merges the titles catalog (readable by any authenticated user) with the signed-in user's
- * own unlocked set, so every title renders with a definite locked/unlocked state. No title
- * is ever actually unlocked yet (see CLAUDE.md's known gaps) — this just displays whatever
- * user_titles rows do exist, correctly, rather than assuming there are none. */
+ * own unlocked set, so every title renders with a definite locked/unlocked state. */
 export async function listMyTitles(userId: string): Promise<TitleDisplay[]> {
   const [titlesResult, unlockedResult] = await Promise.all([
     supabase

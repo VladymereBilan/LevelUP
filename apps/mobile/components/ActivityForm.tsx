@@ -22,7 +22,12 @@ import type { IconName } from "./Icon";
 import { Stepper } from "./Stepper";
 import { Button } from "./Button";
 import type { CategoryRow, CreateCategoryInput } from "../lib/categories";
-import { CATEGORY_COLOR_OPTIONS, CATEGORY_ICON_OPTIONS, getCategoryIcon } from "../lib/questFormat";
+import {
+  CATEGORY_COLOR_OPTIONS,
+  CATEGORY_ICON_OPTIONS,
+  getCategoryIcon,
+  questSourceForMetric,
+} from "../lib/questFormat";
 import { colors, fonts, statLabels } from "../theme/tokens";
 
 const METRIC_OPTIONS: { value: MetricType; label: string }[] = [
@@ -110,8 +115,9 @@ interface ActivityFormProps {
    * among their existing categories, to keep editing a single activity's scope tight. */
   allowNewCategory: boolean;
   initialValues?: ActivityFormInitialValues;
-  /** The signed-in user's current streak, for the difficulty XP preview — matches exactly
-   * how the Quests tab previews XP for an already-scheduled quest (source: "manual"). */
+  /** The signed-in user's current streak, for the difficulty XP preview — fed through the
+   * same difficulty/source/streak math the Quests tab previews with and the completion
+   * route awards by, so the number here is what the quest will actually pay out. */
   streakDays: number;
   submitting: boolean;
   submitLabel: string;
@@ -216,8 +222,8 @@ export function ActivityForm({
   const canSubmit = !submitting && !nameError && !categoryError && targetValid && !scheduleError;
 
   const xpPreview = useMemo(
-    () => calcQuestXp({ difficulty, source: "manual", streakDays }),
-    [difficulty, streakDays],
+    () => calcQuestXp({ difficulty, source: questSourceForMetric(metricType), streakDays }),
+    [difficulty, metricType, streakDays],
   );
 
   function buildSchedule(): Schedule {
