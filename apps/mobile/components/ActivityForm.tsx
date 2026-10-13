@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import {
   calcQuestXp,
   isSafeActivityTarget,
@@ -125,6 +125,31 @@ interface ActivityFormProps {
   onSubmit: (values: ActivityFormValues) => void;
 }
 
+const SCHEDULE_SUMMARY: Record<Schedule["kind"], string> = {
+  daily: "Every day",
+  weekdays: "Chosen weekdays",
+  one_off: "One-off",
+};
+
+/** One short phrase for the collapsed summary: what the player will actually do, rather than
+ * the metric type's internal name. */
+function summarizeTarget(target: ActivityTarget): string {
+  switch (target.type) {
+    case "checkbox":
+      return "Tick when done";
+    case "minutes":
+      return `${target.minutes} min`;
+    case "reps":
+      return `${target.reps} reps`;
+    case "sets_reps_weight":
+      return `${target.sets} x ${target.reps}`;
+    case "distance":
+      return `${(target.meters / 1000).toFixed(target.meters % 1000 === 0 ? 0 : 1)} km`;
+    case "steps":
+      return `${target.steps} steps`;
+  }
+}
+
 function label(text: string) {
   return (
     <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.2 }}>
@@ -178,6 +203,11 @@ export function ActivityForm({
       : 0,
   );
   const [difficulty, setDifficulty] = useState<Difficulty>(initialValues?.difficulty ?? "normal");
+  // Creating an activity asks two questions and defaults the other four. Metric type, target,
+  // schedule and difficulty are the difference between "I want to track running" and filling in
+  // a form, and each has a defensible default. Editing opens expanded: someone who came here to
+  // change a detail should not have to go looking for it first.
+  const [showAdvanced, setShowAdvanced] = useState(initialValues !== undefined);
 
   function changeMetricType(next: MetricType) {
     setMetricType(next);
@@ -225,6 +255,12 @@ export function ActivityForm({
     () => calcQuestXp({ difficulty, source: questSourceForMetric(metricType), streakDays }),
     [difficulty, metricType, streakDays],
   );
+
+  const defaultsSummary = [
+    SCHEDULE_SUMMARY[scheduleKind],
+    DIFFICULTY_OPTIONS.find((option) => option.value === difficulty)?.label ?? difficulty,
+    summarizeTarget(target),
+  ].join("  ·  ");
 
   function buildSchedule(): Schedule {
     if (scheduleKind === "daily") return { kind: "daily" };
@@ -367,155 +403,189 @@ export function ActivityForm({
         {fieldError(nameError)}
       </View>
 
-      <View style={{ gap: 10 }}>
-        {label("METRIC TYPE")}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {METRIC_OPTIONS.map((option) => (
-            <Chip
-              key={option.value}
-              label={option.label}
-              selected={metricType === option.value}
-              onPress={() => changeMetricType(option.value)}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={{ gap: 10 }}>
-        {label("TARGET")}
-        {target.type === "checkbox" ? (
-          <Text style={{ color: colors.muted, fontSize: 12 }}>Just mark it done — no target.</Text>
-        ) : target.type === "minutes" ? (
-          <Stepper
-            value={target.minutes}
-            min={1}
-            max={MAX_MINUTES_TARGET}
-            suffix="min"
-            onChange={(minutes) => setTarget({ type: "minutes", minutes })}
-          />
-        ) : target.type === "reps" ? (
-          <Stepper
-            value={target.reps}
-            min={1}
-            max={MAX_REPS_TARGET}
-            suffix="reps"
-            onChange={(reps) => setTarget({ type: "reps", reps })}
-          />
-        ) : target.type === "distance" ? (
-          <Stepper
-            value={target.meters / 1000}
-            min={0.5}
-            max={MAX_DISTANCE_METERS / 1000}
-            step={0.5}
-            suffix="km"
-            onChange={(km) => setTarget({ type: "distance", meters: Math.round(km * 1000) })}
-          />
-        ) : target.type === "steps" ? (
-          <Stepper
-            value={target.steps}
-            min={500}
-            max={MAX_STEPS_TARGET}
-            step={500}
-            suffix="steps"
-            onChange={(steps) => setTarget({ type: "steps", steps })}
-          />
-        ) : (
-          <View style={{ gap: 16 }}>
-            <View style={{ gap: 6 }}>
-              <Text style={{ color: colors.muted, fontSize: 10 }}>Sets</Text>
-              <Stepper
-                value={target.sets}
-                min={1}
-                max={MAX_SETS_TARGET}
-                onChange={(sets) => setTarget({ ...target, sets })}
-              />
+      {showAdvanced ? (
+        <>
+          <View style={{ gap: 10 }}>
+            {label("METRIC TYPE")}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {METRIC_OPTIONS.map((option) => (
+                <Chip
+                  key={option.value}
+                  label={option.label}
+                  selected={metricType === option.value}
+                  onPress={() => changeMetricType(option.value)}
+                />
+              ))}
             </View>
-            <View style={{ gap: 6 }}>
-              <Text style={{ color: colors.muted, fontSize: 10 }}>Reps per set</Text>
+          </View>
+
+          <View style={{ gap: 10 }}>
+            {label("TARGET")}
+            {target.type === "checkbox" ? (
+              <Text style={{ color: colors.muted, fontSize: 12 }}>
+                Just mark it done — no target.
+              </Text>
+            ) : target.type === "minutes" ? (
+              <Stepper
+                value={target.minutes}
+                min={1}
+                max={MAX_MINUTES_TARGET}
+                suffix="min"
+                onChange={(minutes) => setTarget({ type: "minutes", minutes })}
+              />
+            ) : target.type === "reps" ? (
               <Stepper
                 value={target.reps}
                 min={1}
                 max={MAX_REPS_TARGET}
-                onChange={(reps) => setTarget({ ...target, reps })}
+                suffix="reps"
+                onChange={(reps) => setTarget({ type: "reps", reps })}
               />
-            </View>
-            <View style={{ gap: 6 }}>
-              <Text style={{ color: colors.muted, fontSize: 10 }}>Weight (kg, optional)</Text>
+            ) : target.type === "distance" ? (
               <Stepper
-                value={target.weightKg ?? 0}
-                min={0}
-                max={MAX_WEIGHT_KG}
-                step={5}
-                suffix="kg"
-                onChange={(weightKg) =>
-                  setTarget({
-                    type: "sets_reps_weight",
-                    sets: target.sets,
-                    reps: target.reps,
-                    ...(weightKg === 0 ? {} : { weightKg }),
-                  })
-                }
+                value={target.meters / 1000}
+                min={0.5}
+                max={MAX_DISTANCE_METERS / 1000}
+                step={0.5}
+                suffix="km"
+                onChange={(km) => setTarget({ type: "distance", meters: Math.round(km * 1000) })}
               />
-            </View>
+            ) : target.type === "steps" ? (
+              <Stepper
+                value={target.steps}
+                min={500}
+                max={MAX_STEPS_TARGET}
+                step={500}
+                suffix="steps"
+                onChange={(steps) => setTarget({ type: "steps", steps })}
+              />
+            ) : (
+              <View style={{ gap: 16 }}>
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: colors.muted, fontSize: 10 }}>Sets</Text>
+                  <Stepper
+                    value={target.sets}
+                    min={1}
+                    max={MAX_SETS_TARGET}
+                    onChange={(sets) => setTarget({ ...target, sets })}
+                  />
+                </View>
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: colors.muted, fontSize: 10 }}>Reps per set</Text>
+                  <Stepper
+                    value={target.reps}
+                    min={1}
+                    max={MAX_REPS_TARGET}
+                    onChange={(reps) => setTarget({ ...target, reps })}
+                  />
+                </View>
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: colors.muted, fontSize: 10 }}>Weight (kg, optional)</Text>
+                  <Stepper
+                    value={target.weightKg ?? 0}
+                    min={0}
+                    max={MAX_WEIGHT_KG}
+                    step={5}
+                    suffix="kg"
+                    onChange={(weightKg) =>
+                      setTarget({
+                        type: "sets_reps_weight",
+                        sets: target.sets,
+                        reps: target.reps,
+                        ...(weightKg === 0 ? {} : { weightKg }),
+                      })
+                    }
+                  />
+                </View>
+              </View>
+            )}
+            {fieldError(targetError)}
           </View>
-        )}
-        {fieldError(targetError)}
-      </View>
 
-      <View style={{ gap: 10 }}>
-        {label("SCHEDULE")}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {SCHEDULE_OPTIONS.map((option) => (
-            <Chip
-              key={option.value}
-              label={option.label}
-              selected={scheduleKind === option.value}
-              onPress={() => setScheduleKind(option.value)}
-            />
-          ))}
-        </View>
-        {scheduleKind === "weekdays" ? (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {WEEKDAY_LABELS.map((dayLabel, day) => (
-              <Chip
-                key={day}
-                label={dayLabel}
-                selected={weekdays.includes(day)}
-                onPress={() => toggleWeekday(day)}
-              />
-            ))}
+          <View style={{ gap: 10 }}>
+            {label("SCHEDULE")}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {SCHEDULE_OPTIONS.map((option) => (
+                <Chip
+                  key={option.value}
+                  label={option.label}
+                  selected={scheduleKind === option.value}
+                  onPress={() => setScheduleKind(option.value)}
+                />
+              ))}
+            </View>
+            {scheduleKind === "weekdays" ? (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {WEEKDAY_LABELS.map((dayLabel, day) => (
+                  <Chip
+                    key={day}
+                    label={dayLabel}
+                    selected={weekdays.includes(day)}
+                    onPress={() => toggleWeekday(day)}
+                  />
+                ))}
+              </View>
+            ) : null}
+            {scheduleKind === "one_off" ? (
+              <View style={{ gap: 6 }}>
+                <Text style={{ color: colors.muted, fontSize: 10 }}>Days from today</Text>
+                <Stepper value={oneOffOffset} min={0} max={365} onChange={setOneOffOffset} />
+                <Text style={{ color: colors.muted, fontSize: 11 }}>
+                  {offsetFromToday(oneOffOffset)}
+                </Text>
+              </View>
+            ) : null}
+            {fieldError(scheduleError)}
           </View>
-        ) : null}
-        {scheduleKind === "one_off" ? (
-          <View style={{ gap: 6 }}>
-            <Text style={{ color: colors.muted, fontSize: 10 }}>Days from today</Text>
-            <Stepper value={oneOffOffset} min={0} max={365} onChange={setOneOffOffset} />
-            <Text style={{ color: colors.muted, fontSize: 11 }}>
-              {offsetFromToday(oneOffOffset)}
+
+          <View style={{ gap: 10 }}>
+            {label("DIFFICULTY")}
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {DIFFICULTY_OPTIONS.map((option) => (
+                <Chip
+                  key={option.value}
+                  label={option.label}
+                  selected={difficulty === option.value}
+                  onPress={() => setDifficulty(option.value)}
+                />
+              ))}
+            </View>
+            <Text
+              style={{ color: colors.violetLight, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+            >
+              +{xpPreview} XP per completion
             </Text>
           </View>
-        ) : null}
-        {fieldError(scheduleError)}
-      </View>
-
-      <View style={{ gap: 10 }}>
-        {label("DIFFICULTY")}
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {DIFFICULTY_OPTIONS.map((option) => (
-            <Chip
-              key={option.value}
-              label={option.label}
-              selected={difficulty === option.value}
-              onPress={() => setDifficulty(option.value)}
-            />
-          ))}
-        </View>
-        <Text
-          style={{ color: colors.violetLight, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+        </>
+      ) : (
+        <Pressable
+          onPress={() => setShowAdvanced(true)}
+          style={{
+            minHeight: 44,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: "rgba(18,18,31,0.6)",
+          }}
         >
-          +{xpPreview} XP per completion
-        </Text>
-      </View>
+          <View style={{ flex: 1, gap: 3 }}>
+            {label("SET UP AS")}
+            <Text style={{ color: colors.text, fontSize: 13 }}>{defaultsSummary}</Text>
+            <Text style={{ color: colors.violetLight, fontSize: 11, marginTop: 2 }}>
+              +{xpPreview} XP per completion
+            </Text>
+          </View>
+          <Text style={{ color: colors.violetLight, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>
+            Change
+          </Text>
+        </Pressable>
+      )}
 
       {error ? <Text style={{ color: colors.danger, fontSize: 12 }}>{error}</Text> : null}
 

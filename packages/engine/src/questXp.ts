@@ -31,18 +31,51 @@ export interface CalcQuestXpInput {
   baseXp?: number;
 }
 
-/** Computes the raw XP a completed quest is worth, before any daily cap is applied. */
-export function calcQuestXp(input: CalcQuestXpInput): number {
+/** Every term that went into a quest's XP, so the UI can show a player *why* they earned what
+ * they earned rather than an unexplained number. Returned by explainQuestXp. */
+export interface QuestXpBreakdown {
+  base: number;
+  difficulty: Difficulty;
+  difficultyMultiplier: number;
+  source: QuestSource;
+  sourceMultiplier: number;
+  streakDays: number;
+  /** Fractional bonus from the streak, already capped — 0.15 means +15%. */
+  streakBonus: number;
+  /** The same value calcQuestXp returns for this input. */
+  total: number;
+}
+
+/**
+ * Computes a quest's XP along with each term that produced it. calcQuestXp is defined in terms
+ * of this, so a breakdown shown to a player can never disagree with the amount actually
+ * awarded — the two cannot drift because there is only one calculation.
+ */
+export function explainQuestXp(input: CalcQuestXpInput): QuestXpBreakdown {
   const { difficulty, source, streakDays, baseXp = BASE_QUEST_XP } = input;
   if (streakDays < 0) {
     throw new RangeError(`streakDays must be >= 0, got ${streakDays}`);
   }
 
+  const difficultyMultiplier = DIFFICULTY_MULTIPLIERS[difficulty];
+  const sourceMultiplier = SOURCE_MULTIPLIERS[source];
   const streakBonus = Math.min(streakDays * STREAK_BONUS_PER_DAY, MAX_STREAK_BONUS);
-  const amount =
-    baseXp * DIFFICULTY_MULTIPLIERS[difficulty] * SOURCE_MULTIPLIERS[source] * (1 + streakBonus);
 
-  return Math.round(amount);
+  return {
+    base: baseXp,
+    difficulty,
+    difficultyMultiplier,
+    source,
+    sourceMultiplier,
+    streakDays,
+    streakBonus,
+    total: Math.round(baseXp * difficultyMultiplier * sourceMultiplier * (1 + streakBonus)),
+  };
+}
+
+/** Computes the raw XP a completed quest is worth, before any daily cap is applied. */
+export function calcQuestXp(input: CalcQuestXpInput): number {
+  return explainQuestXp(input).total;
 }
 
 /**

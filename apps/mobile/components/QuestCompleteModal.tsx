@@ -10,10 +10,22 @@ interface QuestCompleteModalProps {
   visible: boolean;
   result: QuestCompleteResult | null;
   onContinue: () => void;
+  /** Shows the one-time daily-reminder offer. The caller decides when it's warranted (see
+   * lib/notifications' shouldOfferDailyReminder) — this component only renders it. */
+  offerReminder?: boolean;
+  onAcceptReminder?: () => void;
+  onDeclineReminder?: () => void;
 }
 
 /** The XP/level-up/rank-up celebration shown right after a quest completes. */
-export function QuestCompleteModal({ visible, result, onContinue }: QuestCompleteModalProps) {
+export function QuestCompleteModal({
+  visible,
+  result,
+  onContinue,
+  offerReminder = false,
+  onAcceptReminder,
+  onDeclineReminder,
+}: QuestCompleteModalProps) {
   if (!result) return null;
 
   return (
@@ -136,6 +148,44 @@ export function QuestCompleteModal({ visible, result, onContinue }: QuestComplet
         <Text style={{ marginTop: 16, color: colors.muted, fontSize: 11 }}>
           Streak: {result.streak.current} day{result.streak.current === 1 ? "" : "s"}
         </Text>
+
+        {offerReminder ? (
+          <View
+            style={{
+              marginTop: 22,
+              width: "100%",
+              gap: 12,
+              padding: 16,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "rgba(96,165,250,0.3)",
+              backgroundColor: "rgba(59,130,246,0.1)",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+              <Icon name="bell" size={14} color={colors.blueLight} />
+              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}>
+                Keep this streak going?
+              </Text>
+            </View>
+            <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>
+              A daily nudge, plus a heads-up when your streak is about to break. You can change this
+              any time in Profile.
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Button icon="bell" onPress={() => onAcceptReminder?.()}>
+                  Remind me
+                </Button>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button variant="ghost" onPress={() => onDeclineReminder?.()}>
+                  Not now
+                </Button>
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         <View style={{ marginTop: 32, width: "100%" }}>
           <Button onPress={onContinue}>Continue</Button>

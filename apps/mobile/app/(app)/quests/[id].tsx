@@ -13,6 +13,15 @@ import {
   type QuestBoardItem,
 } from "../../../lib/questBoard";
 import { completeQuest, type QuestCompleteResult } from "../../../lib/quests";
+import { explainQuestXp, type QuestSource } from "@levelup/engine";
+import { XpBreakdownSheet } from "../../../components/XpBreakdownSheet";
+import { useSession } from "../../../lib/AuthProvider";
+import { getMyStreak } from "../../../lib/streaks";
+import {
+  acceptDailyReminderOffer,
+  declineDailyReminderOffer,
+  shouldOfferDailyReminder,
+} from "../../../lib/notifications";
 import {
   formatProgressLabel,
   progressPercent,
@@ -39,6 +48,14 @@ function stepDelta(item: QuestBoardItem): number {
   return item.metricType === "steps" ? 100 : 1;
 }
 
+/** One word next to the XP figure saying where it comes from. The full explanation lives in
+ * XpBreakdownSheet, a tap away — this is just enough to make the number feel non-arbitrary. */
+const XP_SOURCE_HINT: Record<QuestSource, string> = {
+  manual: "tapped in",
+  timer: "timer-tracked",
+  health: "auto-tracked",
+};
+
 function formatClock(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -48,6 +65,7 @@ function formatClock(totalSeconds: number): string {
 export default function QuestDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { session } = useSession();
 
   const [item, setItem] = useState<QuestBoardItem | null>(null);
   const [localProgress, setLocalProgress] = useState(0);
@@ -56,6 +74,11 @@ export default function QuestDetailScreen() {
   const [completing, setCompleting] = useState(false);
   const [completeResult, setCompleteResult] = useState<QuestCompleteResult | null>(null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  // Drives the XP preview. The streak multiplies the award, so a preview without it would be
+  // wrong for anyone on a streak — which is most players, and exactly the ones who look.
+  const [streakDays, setStreakDays] = useState(0);
+  const [showXpBreakdown, setShowXpBreakdown] = useState(false);
+  const [offerReminder, setOfferReminder] = useState(false);
 
   const [timerRunning, setTimerRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -86,6 +109,12 @@ export default function QuestDetailScreen() {
         setItem(detail);
         setLocalProgress(detail.progress);
         setRunMeters(detail.progress);
+        if (session) {
+          // Best-effort: a missing streak only makes the XP preview conservative, which is
+          // not worth failing the whole screen over.
+          const streak = await getMyStreak(session.user.id).catch(() => null);
+          if (isMounted && streak) setStreakDays(streak.current);
+        }
       } catch (err) {
         if (isMounted) setError(err instanceof Error ? err.message : "Failed to load quest.");
       } finally {
@@ -98,7 +127,7 @@ export default function QuestDetailScreen() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, session]);
 
   useEffect(() => {
     return () => {
@@ -207,6 +236,9 @@ export default function QuestDetailScreen() {
       });
       invalidateQuestBoardCache();
       setCompleteResult(result);
+      // Asked here rather than on launch or in Settings: they have just finished something and
+      // can see the streak it started, which is the only moment the question answers itself.
+      setOfferReminder(await shouldOfferDailyReminder().catch(() => false));
       setShowCompleteModal(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to complete quest.");
@@ -218,6 +250,18 @@ export default function QuestDetailScreen() {
   function handleModalContinue() {
     setShowCompleteModal(false);
     router.back();
+  }
+
+  function handleAcceptReminder() {
+    setOfferReminder(false);
+    // Deliberately not awaited: the permission dialog and scheduling are slower than the tap
+    // feels, and nothing on this screen depends on the outcome.
+    void acceptDailyReminderOffer().catch(() => {});
+  }
+
+  function handleDeclineReminder() {
+    setOfferReminder(false);
+    void declineDailyReminderOffer().catch(() => {});
   }
 
   if (loading) {
@@ -256,6 +300,12 @@ export default function QuestDetailScreen() {
   const alreadyCompleted = item.status === "completed";
   const percent = progressPercent(item.metricType, localProgress, item.target);
   const progressLabel = formatProgressLabel(item.metricType, localProgress, item.target);
+  // The same inputs handleComplete submits, so what's previewed is what gets awarded.
+  const xpBreakdown = explainQuestXp({
+    difficulty: item.difficulty,
+    source: questSourceForMetric(item.metricType),
+    streakDays,
+  });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
@@ -473,9 +523,43 @@ export default function QuestDetailScreen() {
               </Text>
             </View>
           ) : (
-            <Button icon="check" onPress={() => void handleComplete()} loading={completing}>
-              Complete Quest
-            </Button>
+            <View style={{ gap: 10 }}>
+              <Pressable
+                onPress={() => setShowXpBreakdown(true)}
+                style={{
+                  minHeight: 44,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 7,
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.violetLight,
+                    fontFamily: fonts.displaySemiBold,
+                    fontSize: 15,
+                  }}
+                >
+                  +{xpBreakdown.total} XP
+                </Text>
+                <Text style={{ color: colors.muted, fontSize: 11 }}>
+                  {XP_SOURCE_HINT[xpBreakdown.source]}
+                </Text>
+                <Text
+                  style={{
+                    color: colors.disabled,
+                    fontSize: 10,
+                    textDecorationLine: "underline",
+                  }}
+                >
+                  why?
+                </Text>
+              </Pressable>
+              <Button icon="check" onPress={() => void handleComplete()} loading={completing}>
+                Complete Quest
+              </Button>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -484,6 +568,15 @@ export default function QuestDetailScreen() {
         visible={showCompleteModal}
         result={completeResult}
         onContinue={handleModalContinue}
+        offerReminder={offerReminder}
+        onAcceptReminder={handleAcceptReminder}
+        onDeclineReminder={handleDeclineReminder}
+      />
+
+      <XpBreakdownSheet
+        visible={showXpBreakdown}
+        onClose={() => setShowXpBreakdown(false)}
+        breakdown={xpBreakdown}
       />
     </SafeAreaView>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BASE_QUEST_XP, calcQuestXp, capDailyXp } from "../questXp";
+import { BASE_QUEST_XP, calcQuestXp, capDailyXp, explainQuestXp } from "../questXp";
 
 describe("calcQuestXp", () => {
   it("returns the base XP for normal difficulty, manual source, no streak", () => {
@@ -68,5 +68,52 @@ describe("capDailyXp", () => {
 
   it("uses the default daily cap when none is given", () => {
     expect(capDailyXp(1000, 0)).toBe(500);
+  });
+});
+
+describe("explainQuestXp", () => {
+  it("reports every term that produced the total", () => {
+    const b = explainQuestXp({ difficulty: "hard", source: "timer", streakDays: 4 });
+    expect(b).toEqual({
+      base: BASE_QUEST_XP,
+      difficulty: "hard",
+      difficultyMultiplier: 1.5,
+      source: "timer",
+      sourceMultiplier: 0.8,
+      streakDays: 4,
+      streakBonus: 0.1,
+      total: Math.round(BASE_QUEST_XP * 1.5 * 0.8 * 1.1),
+    });
+  });
+
+  it("caps the reported streak bonus the same way the award does", () => {
+    expect(
+      explainQuestXp({ difficulty: "easy", source: "manual", streakDays: 365 }).streakBonus,
+    ).toBe(0.25);
+  });
+
+  it("reports an overridden base rather than the default", () => {
+    expect(
+      explainQuestXp({ difficulty: "normal", source: "health", streakDays: 0, baseXp: 50 }).base,
+    ).toBe(50);
+  });
+
+  it("rejects a negative streak, like calcQuestXp does", () => {
+    expect(() =>
+      explainQuestXp({ difficulty: "normal", source: "manual", streakDays: -1 }),
+    ).toThrow(RangeError);
+  });
+
+  // The whole reason explainQuestXp exists is so a breakdown shown to a player cannot disagree
+  // with the XP actually awarded. Check that across the entire input space, not one example.
+  it("always totals exactly what calcQuestXp returns", () => {
+    for (const difficulty of ["easy", "normal", "hard"] as const) {
+      for (const source of ["manual", "timer", "health"] as const) {
+        for (const streakDays of [0, 1, 3, 7, 10, 11, 50, 365]) {
+          const input = { difficulty, source, streakDays };
+          expect(explainQuestXp(input).total).toBe(calcQuestXp(input));
+        }
+      }
+    }
   });
 });

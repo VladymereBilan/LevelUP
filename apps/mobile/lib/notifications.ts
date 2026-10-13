@@ -15,6 +15,9 @@ export interface NotificationPrefs {
   dailyReminderHour: number;
   dailyReminderMinute: number;
   streakReminderEnabled: boolean;
+  /** Whether the player has already been asked, once, whether they want a daily reminder.
+   * Set whichever way they answer — asking twice is how a helpful prompt becomes nagging. */
+  reminderOffered: boolean;
 }
 
 const DEFAULT_PREFS: NotificationPrefs = {
@@ -22,6 +25,7 @@ const DEFAULT_PREFS: NotificationPrefs = {
   dailyReminderHour: 18,
   dailyReminderMinute: 0,
   streakReminderEnabled: false,
+  reminderOffered: false,
 };
 
 const PREFS_KEY = "notification_prefs";
@@ -111,6 +115,48 @@ export async function applyNotificationSchedule(prefs: NotificationPrefs): Promi
 export async function setNotificationPrefs(prefs: NotificationPrefs): Promise<void> {
   await savePrefs(prefs);
   await applyNotificationSchedule(prefs);
+}
+
+/**
+ * Whether to offer the daily reminder right now. True only once, and only for someone who
+ * doesn't already have reminders on.
+ *
+ * Reminders ship off by default and live two taps deep in Profile, so in practice almost
+ * nobody ever found them — which wasted the single strongest reason to come back the next day.
+ * Asking at app launch is the usual answer and the wrong one: the player has no reason to say
+ * yes yet, and on Android a declined system prompt is not cheap to re-ask. Asking just after a
+ * first finished quest trades on a moment where the answer is naturally yes.
+ */
+export async function shouldOfferDailyReminder(): Promise<boolean> {
+  const prefs = await getNotificationPrefs();
+  return !prefs.reminderOffered && !prefs.dailyReminderEnabled;
+}
+
+/** Accepts the offer: asks for permission, and only enables the reminder if it's granted.
+ * Returns whether it ended up scheduled, so the caller can tell the player the truth. */
+export async function acceptDailyReminderOffer(): Promise<boolean> {
+  const prefs = await getNotificationPrefs();
+  const granted = await requestNotificationPermission();
+  if (!granted) {
+    // Still recorded as offered — re-asking after a denial just trains people to ignore it.
+    await savePrefs({ ...prefs, reminderOffered: true });
+    return false;
+  }
+  await ensureNotificationChannel();
+  await setNotificationPrefs({
+    ...prefs,
+    reminderOffered: true,
+    dailyReminderEnabled: true,
+    streakReminderEnabled: true,
+  });
+  return true;
+}
+
+/** Declines the offer. Nothing is scheduled; Profile -> Notifications is still there whenever
+ * they change their mind. */
+export async function declineDailyReminderOffer(): Promise<void> {
+  const prefs = await getNotificationPrefs();
+  await savePrefs({ ...prefs, reminderOffered: true });
 }
 
 /** Cancels every scheduled local notification and removes the saved preferences — called on
