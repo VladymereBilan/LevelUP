@@ -232,6 +232,39 @@ describe.skipIf(!configured)("POST /api/quests/[id]/complete", () => {
     expect(quest?.status).toBe("completed");
   });
 
+  it("tolerates a local date that moves backwards behind the last recorded completion", async () => {
+    // A player who flies west, or whose device clock/timezone is wound back, reports a local
+    // date EARLIER than streaks.last_completed_date. recordStreakCompletion rejects that
+    // outright with a RangeError, which nothing here catches — so without the route clamping
+    // it, every completion 500s until the calendar catches up. The clamp treats it as another
+    // completion on the already-recorded day: the same-day no-op.
+    const a = await newUser("complete-backwards-date");
+    await admin.from("profiles").update({ timezone: "UTC" }).eq("id", a.user.id);
+    await admin
+      .from("streaks")
+      .update({ current: 3, longest: 5, last_completed_date: "2026-03-06", grace_days_used: 0 })
+      .eq("user_id", a.user.id);
+
+    const { questId } = await seedQuest(admin, a.user.id, {
+      stat: "VIT",
+      difficulty: "normal",
+      date: "2026-03-05",
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-05T12:00:00.000Z"));
+    const { status, body } = await callComplete(questId, a.accessToken);
+
+    expect(status).toBe(200);
+    const streak = body.streak as Record<string, unknown>;
+    expect(streak.current).toBe(3);
+    expect(streak.longest).toBe(5);
+    expect(streak.lastCompletedDate).toBe("2026-03-06");
+
+    const { data: quest } = await admin.from("quests").select("status").eq("id", questId).single();
+    expect(quest?.status).toBe("completed");
+  });
+
   it("uses the user's local date, not the server's UTC date, for the streak boundary", async () => {
     const a = await newUser("complete-timezone");
     await admin.from("profiles").update({ timezone: "Asia/Manila" }).eq("id", a.user.id);

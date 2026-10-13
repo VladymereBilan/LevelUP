@@ -260,6 +260,32 @@ describe.skipIf(!configured)("GET /api/challenges", () => {
     expect(unmet?.status).toBe("failed");
   });
 
+  it("is completed as soon as the target is met, without waiting for the window to end", async () => {
+    // Checking the window before the target left a challenge whose target was already met
+    // reading "active" for the rest of its run, so it never reached the Completed tab and the
+    // player saw 2/2 with no acknowledgement that they were done.
+    const user = userNearNow;
+    const activityId = await insertActivity(user.user.id, "INT");
+    const now = new Date();
+
+    await insertCompletedQuest(user.user.id, activityId, now, "2026-02-01");
+    await insertCompletedQuest(user.user.id, activityId, now, "2026-02-02");
+
+    const challengeId = await insertChallenge({
+      name: "Met Mid-Window Test Challenge",
+      stat: "INT",
+      startsAt: new Date(now.getTime() - DAY_MS),
+      endsAt: new Date(now.getTime() + 5 * DAY_MS),
+      targetValue: 2,
+    });
+
+    const { body } = await callGet(user.accessToken);
+    const challenges = (body as { challenges: ChallengeResponseRow[] }).challenges;
+    const found = challenges.find((c) => c.id === challengeId);
+    expect(found?.progress).toBe(2);
+    expect(found?.status).toBe("completed");
+  });
+
   it("returns 401 without a bearer token", async () => {
     const request = new Request("http://localhost/api/challenges", { method: "GET" });
     const response = await GET(request);

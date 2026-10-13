@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   createVerifiedServiceRoleClient,
   isSupabaseTestEnvConfigured,
@@ -16,7 +16,19 @@ import { GET } from "./route";
  * directly (the same ungated factory every live route uses — it can't be gated, since it also
  * serves real production traffic), so without this beforeAll running first, this test would
  * have no local-host check at all before GET() actually hits the database.
+ *
+ * next/server's connection() is stubbed below because it reads Next's per-request async
+ * store, which only exists inside a real server request — calling the handler directly, as
+ * this test does, makes it throw "`connection` was called outside a request scope". The route
+ * genuinely needs that call (it's what stops Cache Components prerendering the keep-alive
+ * response once at build time), so the runtime boundary is what gets stubbed, not the route.
+ * What's under test here is the rest of it: that the database read succeeds and the response
+ * shape is right.
  */
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  connection: () => Promise.resolve(),
+}));
 
 const TEST_FILE_LABEL = "health/route.test.ts";
 const configured = isSupabaseTestEnvConfigured();

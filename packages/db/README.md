@@ -85,12 +85,11 @@ install Docker Desktop, enable "Use the WSL 2 based engine" in its settings, and
 distro is installed (`wsl --install` from an elevated PowerShell if `wsl --status` reports it
 isn't).
 
-**This repo's dev environment doesn't have Docker**, so the migrations have never run against a
-_local_ Postgres here — only syntax-validated offline against `libpg_query` (via the `pglast`
-Python package). They have, however, been applied to and verified against the hosted project
-when it was still being used as a dev/test target, before the production decision above — that
-history doesn't change the current rule: nothing automated touches it anymore. Run
-`supabase db reset` against a local instance before trusting this schema there.
+All 16 migrations have been applied to a local Postgres via `supabase db reset` and every
+real-DB suite passes against it. (For a long stretch this environment had no Docker, so they
+were only syntax-validated offline against `libpg_query` via the `pglast` Python package —
+that's no longer the case, but if you're on a machine without Docker, that offline check is
+still the only option.)
 
 ## Regenerating `database.types.ts`
 
@@ -195,12 +194,34 @@ any authenticated user but not writable; neither `user_titles` nor `user_challen
 written by a client at all.
 
 **Both packages auto-load root `.env.local`** (`vitest.setup.ts` in each — a ~15-line
-dependency-free loader, mirrored in both so they behave identically). Point it at your local
-Supabase instance (the values `supabase start` prints) and a plain `pnpm test` from the repo
-root just works. If `.env.local` is ever accidentally left pointing at the hosted project, `pnpm
-test` **fails immediately** on the local-host guard rather than quietly running against
-production — there's no flag to override that. A fresh clone with no `.env.local` at all skips
-these suites cleanly instead.
+dependency-free loader, mirrored in both so they behave identically), and **existing
+`process.env` values always win over the file**. So there are two ways to point the suites at a
+local instance:
+
+- **Put the local values in `.env.local`** (what `supabase start` prints), then a plain
+  `pnpm test` works. This is the simplest setup, but it means that file can't simultaneously
+  hold the hosted project's values for anything else that reads it.
+- **Override inline**, leaving `.env.local` alone — useful when it holds non-local values for
+  other tooling:
+
+  ```bash
+  SUPABASE_URL=http://127.0.0.1:54321   SUPABASE_ANON_KEY=<local anon key>   SUPABASE_SERVICE_ROLE_KEY=<local service_role key>   pnpm test
+  ```
+
+  For the inline form to survive a root `pnpm test`, those three names **must** be declared in
+  `turbo.json`'s `test` task `env` — Turbo runs tasks in strict env mode, so anything not
+  declared there is stripped before vitest ever sees it, leaving `.env.local` as the only
+  surviving source. They are declared; don't remove them.
+
+If `.env.local` is left pointing at the hosted project and nothing overrides it, `pnpm test`
+**fails immediately** on the local-host guard rather than quietly running against production —
+there's no flag to override that. A fresh clone with no `.env.local` at all skips these suites
+cleanly instead.
+
+One caching caveat: Turbo caches `test` results, and a real-DB suite's outcome also depends on
+database state, which Turbo can't hash. Migrations and source files are inputs, so editing
+those busts the cache correctly — but after a bare `supabase db reset` with no file changes, add
+`--force` to re-run rather than replay a cached pass.
 
 ## Functions
 
