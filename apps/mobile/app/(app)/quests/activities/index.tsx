@@ -5,7 +5,11 @@ import { useRouter } from "expo-router";
 import type { Schedule } from "@levelup/engine";
 import { Chip } from "../../../../components/Chip";
 import { Icon } from "../../../../components/Icon";
-import { listMyActivities, setActivityArchived, type ActivityRow } from "../../../../lib/activities";
+import {
+  listMyActivities,
+  setActivityArchived,
+  type ActivityRow,
+} from "../../../../lib/activities";
 import { useSession } from "../../../../lib/AuthProvider";
 import { listMyCategories, type CategoryRow } from "../../../../lib/categories";
 import { invalidateQuestBoardCache } from "../../../../lib/questBoard";
@@ -118,7 +122,9 @@ export default function ManageActivitiesScreen() {
           <ActivityIndicator color={colors.violet} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 0, paddingBottom: 40, flexGrow: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 20, paddingTop: 0, paddingBottom: 40, flexGrow: 1 }}
+        >
           {error ? (
             <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>{error}</Text>
           ) : null}
@@ -206,7 +212,9 @@ export default function ManageActivitiesScreen() {
                     opacity: pendingId === activity.id ? 0.5 : 1,
                   }}
                 >
-                  <View style={activity.archived ? { transform: [{ rotate: "180deg" }] } : undefined}>
+                  <View
+                    style={activity.archived ? { transform: [{ rotate: "180deg" }] } : undefined}
+                  >
                     <Icon
                       name={activity.archived ? "arrow" : "minus"}
                       size={15}

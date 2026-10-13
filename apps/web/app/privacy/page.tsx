@@ -76,13 +76,13 @@ export default function PrivacyPolicyPage() {
       <Section title="Data deletion">
         <p>
           You can delete your account and all associated data yourself, in-app: Profile → Danger
-          Zone → Delete my account. If you&apos;d rather not sign back in, you can request
-          deletion by email instead. See{" "}
+          Zone → Delete my account. If you&apos;d rather not sign back in, you can request deletion
+          by email instead. See{" "}
           <a href="/delete-account" className="text-violet underline">
             Delete Your Account
           </a>{" "}
-          for exactly how to do either, what&apos;s deleted, and how long it can persist in a
-          backup afterward.
+          for exactly how to do either, what&apos;s deleted, and how long it can persist in a backup
+          afterward.
         </p>
       </Section>
 

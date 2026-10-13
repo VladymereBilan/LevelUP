@@ -61,18 +61,14 @@ export function DeleteAccountSheet({ visible, onClose }: DeleteAccountSheetProps
           <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 17 }}>
             Delete your account?
           </Text>
-          <Text
-            style={{ color: colors.muted, fontSize: 12, textAlign: "center", lineHeight: 18 }}
-          >
-            This permanently deletes your account and everything in it — level, XP, stats,
-            streaks, categories, activities, quests, and titles. This cannot be undone.
+          <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center", lineHeight: 18 }}>
+            This permanently deletes your account and everything in it — level, XP, stats, streaks,
+            categories, activities, quests, and titles. This cannot be undone.
           </Text>
         </View>
 
         <View style={{ gap: 8 }}>
-          <Text
-            style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.2 }}
-          >
+          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.2 }}>
             TYPE {DELETE_ACCOUNT_CONFIRMATION_PHRASE} TO CONFIRM
           </Text>
           <TextInput
@@ -97,9 +93,7 @@ export function DeleteAccountSheet({ visible, onClose }: DeleteAccountSheetProps
         </View>
 
         {error ? (
-          <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>
-            {error}
-          </Text>
+          <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>{error}</Text>
         ) : null}
 
         <Button

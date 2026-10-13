@@ -248,7 +248,7 @@ Not yet started:
 2. **Google Sign-In** (via a Google Cloud project), wired into both apps' auth layers.
 
 Shipped: notifications, Health Connect + GPS run tracking, original branding, `/privacy` +
-`/terms`, the production decision itself (the hosted project *is* production — see "Production"
+`/terms`, the production decision itself (the hosted project _is_ production — see "Production"
 above — rather than a separate project being stood up), production safety/keep-alive/backup
 tooling (see `docs/PRODUCTION.md`), and in-app account deletion (Google Play requirement) with
 its `apps/web/app/delete-account` companion page.

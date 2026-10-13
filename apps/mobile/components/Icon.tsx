@@ -112,7 +112,10 @@ const ICON_ELEMENTS: Record<IconName, IconElement[]> = {
   ],
   trash: [
     { type: "path", d: "M4 7h16M10 11v6M14 11v6" },
-    { type: "path", d: "M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" },
+    {
+      type: "path",
+      d: "M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3",
+    },
   ],
   trophy: [
     { type: "path", d: "M8 4h8v3a4 4 0 0 1-8 0V4Z" },

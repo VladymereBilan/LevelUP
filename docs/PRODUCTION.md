@@ -9,10 +9,10 @@ CLI script confirmation flag) that enforce this.
 
 ## Environments
 
-| Environment | apps/web | apps/mobile | Supabase |
-|---|---|---|---|
-| **Production** | Vercel Production deployment (`https://web-nine-chi-48.vercel.app`, aliased from `main`) | EAS `production` build profile (`eas.json`), store-distributed app bundle | the hosted project above |
-| **Local dev** | `pnpm dev` (`apps/web`), `http://localhost:3000` | `pnpm dev` (`apps/mobile`), EAS `development` build profile | local Supabase (`npx supabase start`) |
+| Environment    | apps/web                                                                                 | apps/mobile                                                               | Supabase                              |
+| -------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------- |
+| **Production** | Vercel Production deployment (`https://web-nine-chi-48.vercel.app`, aliased from `main`) | EAS `production` build profile (`eas.json`), store-distributed app bundle | the hosted project above              |
+| **Local dev**  | `pnpm dev` (`apps/web`), `http://localhost:3000`                                         | `pnpm dev` (`apps/mobile`), EAS `development` build profile               | local Supabase (`npx supabase start`) |
 
 There is no separate staging Supabase project today — a build pointed at anything other than
 local or the hosted project isn't a supported configuration.
@@ -25,9 +25,9 @@ Set in the Vercel dashboard: Project → Settings → Environment Variables → 
 **Production** environment specifically (not Preview/Development, which should point at local
 or a throwaway project if you ever need them — not covered here since none exists yet).
 
-| Variable | Used for |
-|---|---|
-| `SUPABASE_URL` | `createServiceRoleClient()` — every server route |
+| Variable                    | Used for                                                           |
+| --------------------------- | ------------------------------------------------------------------ |
+| `SUPABASE_URL`              | `createServiceRoleClient()` — every server route                   |
 | `SUPABASE_SERVICE_ROLE_KEY` | same — bypasses RLS, server-only, never shipped to a client bundle |
 
 (`NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` exist in `.env.example` as
@@ -124,7 +124,7 @@ packages\db\scripts\restore-test.ps1 -BackupPath C:\path\to\backup-20260101-0700
 
 It prompts for the GPG passphrase interactively (never as an argument, never logged), refuses to
 run against anything but the local Supabase instance (mirroring
-`packages/db/src/host.ts`'s `isLocalSupabaseHost`), restores using the `pg_restore` *inside* the
+`packages/db/src/host.ts`'s `isLocalSupabaseHost`), restores using the `pg_restore` _inside_ the
 local Supabase Postgres container (so the version always matches — see the backup workflow's own
 version-matching fix for why that matters), and drops the scratch database afterward unless
 `-KeepDatabase` is passed. It needs Git for Windows on `PATH` (for a working `gpg` — see the
@@ -146,7 +146,7 @@ to confirm the schema matches what's expected.
 ## Go-live checklist
 
 - [ ] All migrations in `packages/db/supabase/migrations/` applied: `npx supabase db push
-      --dry-run` from `packages/db` shows nothing pending
+--dry-run` from `packages/db` shows nothing pending
 - [ ] Production safety guards verified: `pnpm test` from the repo root with `SUPABASE_URL`
       unset skips the real-DB suites cleanly (no `.env.local` pointed at the hosted project by
       accident)
@@ -157,7 +157,7 @@ to confirm the schema matches what's expected.
       secrets set (keep-alive needs none; backup needs `PROD_DATABASE_URL` and
       `BACKUP_GPG_PASSPHRASE`)
 - [ ] EAS `production` profile builds successfully (`eas build --profile production --platform
-      android`) with `EXPO_PUBLIC_*` registered via `eas env:create --environment production`
+android`) with `EXPO_PUBLIC_*` registered via `eas env:create --environment production`
 - [ ] Read-only production audit (row counts, test-data scan, RLS/privilege check — see
       `packages/db/README.md`'s "Production safety" and this session's own audit) shows no
       leftover test pollution

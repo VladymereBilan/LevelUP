@@ -45,10 +45,7 @@ interface CallResult {
   body: Record<string, unknown>;
 }
 
-async function callDelete(
-  accessToken: string,
-  body: Record<string, unknown>,
-): Promise<CallResult> {
+async function callDelete(accessToken: string, body: Record<string, unknown>): Promise<CallResult> {
   const request = new Request("http://localhost/api/account/delete", {
     method: "POST",
     headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },

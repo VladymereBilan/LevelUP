@@ -93,7 +93,10 @@ export interface UpdateActivityInput {
   difficulty?: Difficulty;
 }
 
-export async function updateActivity(activityId: string, input: UpdateActivityInput): Promise<void> {
+export async function updateActivity(
+  activityId: string,
+  input: UpdateActivityInput,
+): Promise<void> {
   const { error } = await supabase
     .from("activities")
     .update({

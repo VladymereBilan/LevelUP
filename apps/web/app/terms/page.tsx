@@ -63,8 +63,8 @@ export default function TermsOfServicePage() {
           <a href="/delete-account" className="text-violet underline">
             Delete Your Account
           </a>
-          . We may suspend an account used to abuse the service, including attempts to submit
-          forged progress data.
+          . We may suspend an account used to abuse the service, including attempts to submit forged
+          progress data.
         </p>
       </Section>
 
