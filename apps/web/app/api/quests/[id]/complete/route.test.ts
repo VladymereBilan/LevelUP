@@ -251,7 +251,13 @@ describe.skipIf(!configured)("POST /api/quests/[id]/complete", () => {
       date: "2026-03-05",
     });
 
-    vi.useFakeTimers();
+    // Only Date is faked. A bare vi.useFakeTimers() also replaces setTimeout/setInterval,
+    // which supabase-js's HTTP stack needs real ones of — with the clock frozen and nothing
+    // advancing it, a request that happens to wait on a timer never completes. That is fast
+    // enough to slip through locally and hangs on a slower CI runner, which is exactly how
+    // this surfaced: these were the only two tests here using fake timers, and the only two
+    // that timed out in CI.
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-03-05T12:00:00.000Z"));
     const { status, body } = await callComplete(questId, a.accessToken);
 
@@ -276,7 +282,7 @@ describe.skipIf(!configured)("POST /api/quests/[id]/complete", () => {
     });
 
     // 2026-03-05T15:30:00Z = 2026-03-05 23:30 in Asia/Manila (UTC+8).
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-03-05T15:30:00.000Z"));
     const first = await callComplete(questId1, a.accessToken);
     expect(first.status).toBe(200);
