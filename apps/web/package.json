@@ -13,7 +13,7 @@
   "dependencies": {
     "@levelup/db": "workspace:*",
     "@levelup/engine": "workspace:*",
-    "@supabase/supabase-js": "^2.49.4",
+    "@supabase/supabase-js": "^2.117.3",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"

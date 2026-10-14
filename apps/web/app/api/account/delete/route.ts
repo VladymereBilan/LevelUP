@@ -1,4 +1,4 @@
-import { authenticate, enforceRateLimit } from "@/lib/api/auth";
+import { authenticateFresh, enforceRateLimit } from "@/lib/api/auth";
 
 const RATE_LIMIT = { endpoint: "account.delete", maxRequests: 5, windowSeconds: 60 };
 const CONFIRMATION_PHRASE = "DELETE";
@@ -15,9 +15,14 @@ const CONFIRMATION_PHRASE = "DELETE";
  * doesn't block it. No migration was needed for this feature: every existing user_id column
  * already cascades (verified by this route's own test, which checks every one of those tables
  * is empty after deletion — not just assumed from the schema).
+ *
+ * Authenticates with `authenticateFresh`, not `authenticate`: this is the one route whose
+ * effect can't be undone, so it asks the Auth server whether the session is still live
+ * rather than accepting a token that merely hasn't expired yet. The extra round trip is
+ * paid once, by a user who just typed DELETE.
  */
 export async function POST(request: Request): Promise<Response> {
-  const auth = await authenticate(request);
+  const auth = await authenticateFresh(request);
   if (auth instanceof Response) return auth;
   const { supabase, userId } = auth;
 
