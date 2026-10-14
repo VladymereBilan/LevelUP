@@ -10,13 +10,18 @@ import type { Database } from "../database.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Proves the three server-only Postgres functions actually can't be called
- * by an authenticated client — their EXECUTE grant is service_role-only
- * (revoked from anon/authenticated in each function's own migration). This
- * matters because these functions are the only path that writes level/xp/
- * rank/stats or generates quests server-side: if a client could call them
- * directly over RPC, the route handlers' own checks (JWT ownership, status
- * validation, rate limiting) would be bypassable entirely.
+ * Proves the server-only Postgres functions actually can't be called by an
+ * authenticated client — their EXECUTE grant is service_role-only (revoked
+ * from anon/authenticated in each function's own migration). This matters
+ * because these functions are the only path that writes level/xp/rank/stats
+ * or generates quests server-side: if a client could call them directly over
+ * RPC, the route handlers' own checks (JWT ownership, status validation, rate
+ * limiting) would be bypassable entirely.
+ *
+ * get_home_state writes nothing, so it's here for a different reason: it reads
+ * another user's whole profile, stats, streak, board and titles when handed
+ * their id. It's `security definer`, so RLS does not constrain it — the
+ * service_role-only grant is the entire boundary.
  *
  * Same skip/fail policy as every other real-DB suite — see
  * packages/db/src/testing.ts.
@@ -76,6 +81,16 @@ describe.skipIf(!configured)("server-only RPC privileges", () => {
 
   it("blocks an authenticated client from calling generate_daily_quests directly", async () => {
     const { error } = await a.client.rpc("generate_daily_quests", {
+      p_user_id: a.user.id,
+      p_date: "2026-01-01",
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it("blocks an authenticated client from calling get_home_state directly", async () => {
+    // Asking for their own id, which RLS would have allowed through the
+    // underlying tables — the point is that the function itself is unreachable.
+    const { error } = await a.client.rpc("get_home_state", {
       p_user_id: a.user.id,
       p_date: "2026-01-01",
     });
