@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { bootMark } from "./bootTrace";
 import { supabase } from "./supabase";
 
 interface AuthContextValue {
@@ -18,6 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     supabase.auth.getSession().then(({ data }) => {
+      bootMark("session restore");
       if (!isMounted) return;
       setSession(data.session);
       setLoading(false);

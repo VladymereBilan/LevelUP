@@ -9,7 +9,11 @@ if (!API_URL) {
   );
 }
 
-const DEFAULT_TIMEOUT_MS = 15000;
+// Bounded well short of Vercel's own function limit: with the functions pinned to the
+// Supabase region (apps/web/vercel.json) a warm route answers in well under a second, so
+// anything past this is a cold start stacked on a bad connection — and a user watching a
+// spinner is better served by a retryable error than by another ten seconds of waiting.
+const DEFAULT_TIMEOUT_MS = 10000;
 
 export type ApiErrorKind = "network" | "timeout" | "rate_limited" | "session_expired" | "http";
 

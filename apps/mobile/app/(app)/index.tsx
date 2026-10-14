@@ -11,6 +11,7 @@ import { StatBar } from "../../components/StatBar";
 import { StreakChip } from "../../components/StreakChip";
 import { XpBar } from "../../components/XpBar";
 import { useSession } from "../../lib/AuthProvider";
+import { bootMark } from "../../lib/bootTrace";
 import { getMyProfile, type ProfileSummary } from "../../lib/profile";
 import { getMyStats, type StatsRow } from "../../lib/stats";
 import { getMyStreak, type StreakRow } from "../../lib/streaks";
@@ -56,6 +57,7 @@ export default function HomeScreen() {
         equippedTitleName: titles.find((title) => title.id === profile.title_id)?.name ?? null,
       });
       setError(null);
+      bootMark("home data");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load your data.");
     }

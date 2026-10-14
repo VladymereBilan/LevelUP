@@ -56,6 +56,18 @@ Expo's env loading reads `.env*` files from the directory you run `expo start`/`
 from (`apps/mobile/`, not the monorepo root), so the root `.env.local` doesn't reach this app on
 its own; copy these two values in from there.
 
+One optional extra:
+
+```
+EXPO_PUBLIC_BOOT_TRACE=1
+```
+
+Turns on `lib/bootTrace.ts`, which logs each cold-start phase (`fonts`, `session restore`,
+`onboarding check`, `home data`) with its own duration and a running total. It's an env flag
+rather than a `__DEV__` check because cold start is only worth measuring on a release build on a
+real device over a real network — build with it set and read the output over
+`adb logcat -s ReactNativeJS:V`. Leave it unset for the builds you ship.
+
 ### 2. Google Cloud OAuth client
 
 In the Google Cloud Console, under the relevant project: Credentials → Create Credentials →

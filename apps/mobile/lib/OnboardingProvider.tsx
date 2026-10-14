@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { bootMark } from "./bootTrace";
 import { useSession } from "./AuthProvider";
 import { needsOnboarding as checkNeedsOnboarding } from "./onboarding";
 import { setTimezone } from "./profile";
-import { generateQuests } from "./quests";
 
 export type OnboardingStatus = "loading" | "needs-onboarding" | "ready";
 
@@ -14,19 +14,30 @@ interface OnboardingContextValue {
 
 const OnboardingContext = createContext<OnboardingContextValue | undefined>(undefined);
 
-/** Sets the device's IANA timezone server-side, then generates today's quests. Best-effort —
- * a failure here shouldn't block entry to the app; Home's own fetch/pull-to-refresh cover it. */
+/**
+ * Pushes the device's IANA timezone server-side. Quest generation reads
+ * `profiles.timezone` to decide which local day to generate for, and the column
+ * defaults to 'UTC', so a brand-new account has to have this land before its first
+ * generate — which is why `completeOnboarding` awaits it.
+ *
+ * A returning user already has the right value stored from a previous session, so
+ * there it runs un-awaited: nothing on Home needs it to render, and awaiting it put
+ * a Vercel round trip in front of the first frame.
+ */
 async function bootstrapSession(): Promise<void> {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   await setTimezone(timezone).catch(() => {});
-  await generateQuests().catch(() => {});
 }
 
 /**
- * Tracks whether the signed-in user still needs onboarding (zero
- * categories), and runs the once-per-sign-in bootstrap (device timezone +
- * quest generation) once they don't. The root layout reads `status` to
- * decide between (app), (onboarding), and a loading spinner.
+ * Tracks whether the signed-in user still needs onboarding (zero categories). The
+ * root layout reads `status` to decide between (app), (onboarding), and holding the
+ * splash.
+ *
+ * Quest generation is deliberately NOT part of this: `loadTodaysQuestBoard()` is its
+ * single caller now (Home and the Quests tab both go through it, and it de-dupes
+ * concurrent calls), so opening the app hits /api/quests/generate once instead of
+ * twice.
  */
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { session } = useSession();
@@ -51,6 +62,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
       try {
         const needsIt = await checkNeedsOnboarding(userId);
+        bootMark("onboarding check");
         if (!isMounted) return;
 
         if (needsIt) {
@@ -58,8 +70,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        await bootstrapSession();
-        if (isMounted) setStatus("ready");
+        setStatus("ready");
+        void bootstrapSession();
       } catch {
         // Can't tell whether onboarding is needed — fail toward showing the
         // app rather than stranding the user on a spinner forever; Home's

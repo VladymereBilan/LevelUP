@@ -17,6 +17,16 @@ CLI script confirmation flag) that enforce this.
 There is no separate staging Supabase project today — a build pointed at anything other than
 local or the hosted project isn't a supported configuration.
 
+### Function region
+
+`apps/web/vercel.json` pins Vercel Functions to `hnd1` (Tokyo) so they sit in the same region as
+the Supabase project (`ap-northeast-1`). This is not a micro-optimisation: every API route makes
+three to four _sequential_ Supabase calls (JWT verify, rate-limit RPC, then its own queries), so
+on Vercel's default `iad1` (US East) a single request crossed the Pacific four times — roughly
+600ms-1s of pure network inside one route handler, before cold start. Keep this file in sync if
+the Supabase project ever moves regions, and note that it only takes effect if the Vercel
+project's **Root Directory** is set to `apps/web`.
+
 ## Environment variables
 
 ### Vercel (apps/web) — Production environment
