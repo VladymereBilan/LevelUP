@@ -1,6 +1,6 @@
 import Svg, { Circle, Line, Polygon, Text as SvgText } from "react-native-svg";
 import { STATS, type Stat, type StatBlock } from "@levelup/engine";
-import { colors } from "../theme/tokens";
+import { colors, fontSizes } from "../theme/tokens";
 
 interface RadarChartProps {
   values: StatBlock;
@@ -84,7 +84,7 @@ export function RadarChart({ values, size = 220 }: RadarChartProps) {
             x={x}
             y={y}
             fill={colors.muted}
-            fontSize={10}
+            fontSize={fontSizes.label}
             fontWeight="700"
             textAnchor="middle"
             alignmentBaseline="middle"

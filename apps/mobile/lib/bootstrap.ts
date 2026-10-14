@@ -49,10 +49,17 @@ const CACHE_MS = 5000;
 let cached: BootstrapState | null = null;
 let cachedAt = 0;
 let inFlight: Promise<BootstrapState> | null = null;
+// Bumped on every invalidation so a response that was already in flight when
+// the state changed can be recognised as predating it. Without this, a refresh
+// started just before a quest completion resolves afterwards and installs its
+// pre-completion answer as the cached truth, and the board shows the quest
+// still pending.
+let generation = 0;
 
 export function invalidateBootstrapCache(): void {
   cached = null;
   inFlight = null;
+  generation += 1;
 }
 
 const PROFILE_RETRY_DELAYS_MS = [500, 1000];
@@ -63,15 +70,22 @@ export function loadBootstrap(): Promise<BootstrapState> {
   }
   if (inFlight) return inFlight;
 
+  const startedAt = generation;
   inFlight = fetchBootstrap().then(
     (state) => {
-      cached = state;
-      cachedAt = Date.now();
-      inFlight = null;
+      // Still handed back to whoever asked — they requested it before the
+      // change — but it must not become the cached answer for anyone else.
+      // Leaving `inFlight` alone here is deliberate: the invalidation already
+      // cleared it, and a newer request may have taken its place.
+      if (generation === startedAt) {
+        cached = state;
+        cachedAt = Date.now();
+        inFlight = null;
+      }
       return state;
     },
     (err: unknown) => {
-      inFlight = null;
+      if (generation === startedAt) inFlight = null;
       throw err;
     },
   );
