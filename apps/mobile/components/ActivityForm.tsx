@@ -95,6 +95,7 @@ export interface ActivityFormInitialValues {
   target: ActivityTarget;
   schedule: Schedule;
   difficulty: Difficulty;
+  notes: string | null;
 }
 
 export type ActivityFormCategorySelection =
@@ -107,6 +108,9 @@ export interface ActivityFormValues {
   target: ActivityTarget;
   schedule: Schedule;
   difficulty: Difficulty;
+  /** Trimmed; null when the field was left empty, so "no note" is a null and never an
+   * empty string the DB would have to store and every reader would have to check for. */
+  notes: string | null;
 }
 
 interface ActivityFormProps {
@@ -194,6 +198,7 @@ export function ActivityForm({
   const [newCategoryStat, setNewCategoryStat] = useState<Stat>("STR");
 
   const [name, setName] = useState(initialValues?.name ?? "");
+  const [notes, setNotes] = useState(initialValues?.notes ?? "");
   const [metricType, setMetricType] = useState<MetricType>(initialValues?.metricType ?? "checkbox");
   const [target, setTarget] = useState<ActivityTarget>(
     initialValues?.target ?? defaultTargetFor("checkbox"),
@@ -298,6 +303,7 @@ export function ActivityForm({
       target,
       schedule: buildSchedule(),
       difficulty,
+      notes: notes.trim() || null,
     });
   }
 
@@ -305,6 +311,12 @@ export function ActivityForm({
     <View style={{ gap: 24 }}>
       <View style={{ gap: 10 }}>
         {label("CATEGORY")}
+        {/* The relationship nobody can infer from the form: a category is the grouping the
+            Quests tab shows ("Push Day"), AND it picks which of the five stats the work
+            builds. Both facts, in one line, where the choice is made. */}
+        <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+          Groups this with related activities, and decides which stat it builds.
+        </Text>
         {allowNewCategory && categories.length > 0 ? (
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Chip
@@ -408,6 +420,33 @@ export function ActivityForm({
           }}
         />
         {fieldError(nameError)}
+      </View>
+
+      <View style={{ gap: 10 }}>
+        {label("NOTES (OPTIONAL)")}
+        <TextInput
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="e.g. 3 x 10 @ 60kg, rest 90s"
+          placeholderTextColor={colors.disabled}
+          maxLength={500}
+          multiline
+          textAlignVertical="top"
+          style={{
+            minHeight: 72,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: "rgba(18,18,31,0.75)",
+            color: colors.text,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            fontSize: fontSizes.body,
+          }}
+        />
+        <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+          Weights, sets, a chapter, anything you want in front of you when the quest comes up.
+        </Text>
       </View>
 
       {showAdvanced ? (

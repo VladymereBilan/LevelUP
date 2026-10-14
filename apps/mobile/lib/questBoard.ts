@@ -13,6 +13,8 @@ export interface QuestBoardItem {
   stat: Stat;
   title: string;
   metricType: MetricType;
+  /** The activity's note, if it has one — shown on the detail screen. */
+  notes: string | null;
   target: ActivityTarget;
   difficulty: Difficulty;
   progress: number;
@@ -32,7 +34,7 @@ export async function loadQuestDetail(questId: string): Promise<QuestBoardItem |
 
   const { data: activity, error: activityError } = await supabase
     .from("activities")
-    .select("id, category_id, name, metric_type, difficulty")
+    .select("id, category_id, name, metric_type, difficulty, notes")
     .eq("id", quest.activity_id)
     .maybeSingle();
   if (activityError) throw new Error(activityError.message);
@@ -56,6 +58,7 @@ export async function loadQuestDetail(questId: string): Promise<QuestBoardItem |
     stat: category.stat,
     title: activity.name,
     metricType: activity.metric_type,
+    notes: activity.notes,
     target: quest.target,
     difficulty: activity.difficulty,
     progress: quest.progress,

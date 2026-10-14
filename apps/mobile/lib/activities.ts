@@ -4,7 +4,7 @@ import { supabase, type MobileDatabase } from "./supabase";
 export type ActivityRow = MobileDatabase["public"]["Tables"]["activities"]["Row"];
 
 const ACTIVITY_COLUMNS =
-  "id, category_id, user_id, name, metric_type, target_value, schedule, difficulty, archived, created_at";
+  "id, category_id, user_id, name, metric_type, target_value, schedule, difficulty, notes, archived, created_at";
 
 /** Fetches the signed-in user's own activities (RLS scopes this to their rows only). */
 export async function listMyActivities(
@@ -42,6 +42,8 @@ export interface CreateActivityInput {
   target: ActivityTarget;
   schedule: Schedule;
   difficulty: Difficulty;
+  /** Free-text, up to 500 characters (enforced by the DB too). Empty means no note. */
+  notes?: string | null;
 }
 
 /** Inserts a new activity owned by the signed-in user (RLS's activities_insert_own policy
@@ -62,6 +64,7 @@ export async function createActivity(
       target_value: input.target,
       schedule: input.schedule,
       difficulty: input.difficulty,
+      notes: input.notes ?? null,
     })
     .select(ACTIVITY_COLUMNS)
     .single();
@@ -79,6 +82,7 @@ export interface UpdateActivityInput {
   target?: ActivityTarget;
   schedule?: Schedule;
   difficulty?: Difficulty;
+  notes?: string | null;
 }
 
 export async function updateActivity(
@@ -94,6 +98,7 @@ export async function updateActivity(
       ...(input.target !== undefined ? { target_value: input.target } : {}),
       ...(input.schedule !== undefined ? { schedule: input.schedule } : {}),
       ...(input.difficulty !== undefined ? { difficulty: input.difficulty } : {}),
+      ...(input.notes !== undefined ? { notes: input.notes } : {}),
     })
     .eq("id", activityId);
 

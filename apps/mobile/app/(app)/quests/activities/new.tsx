@@ -53,6 +53,7 @@ export default function NewActivityScreen() {
         target: values.target,
         schedule: values.schedule,
         difficulty: values.difficulty,
+        notes: values.notes,
       });
 
       invalidateBootstrapCache();
@@ -91,6 +92,20 @@ export default function NewActivityScreen() {
           Add Activity
         </Text>
       </View>
+
+      {/* "Activity" is our word for it, and on an empty form it doesn't say what to type.
+          One exercise, one study block, one habit — the unit, named in the user's terms. */}
+      <Text
+        style={{
+          color: colors.muted,
+          fontSize: fontSizes.label,
+          paddingHorizontal: 20,
+          marginBottom: 14,
+        }}
+      >
+        One thing you want to track — a single exercise, a study block, a habit. It becomes a quest
+        on the days you schedule it.
+      </Text>
 
       {loading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>

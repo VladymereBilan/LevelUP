@@ -45,7 +45,7 @@ function asState(body: CallResult["body"]): BootstrapResponse {
 async function seedDailyActivity(
   admin: SupabaseClient<Database>,
   userId: string,
-  opts: { categoryName: string; activityName: string },
+  opts: { categoryName: string; activityName: string; notes?: string },
 ): Promise<void> {
   const { data: category, error: categoryError } = await admin
     .from("categories")
@@ -70,6 +70,7 @@ async function seedDailyActivity(
     target_value: { type: "checkbox" },
     schedule: { kind: "daily" },
     difficulty: "normal",
+    notes: opts.notes ?? null,
   });
   if (activityError) {
     throw new Error(`seed activity failed: ${activityError.message}`);
@@ -92,6 +93,7 @@ describe.skipIf(!configured)("POST /api/bootstrap", () => {
     await seedDailyActivity(admin, user.user.id, {
       categoryName: "Strength",
       activityName: "Push-ups",
+      notes: "3 x 10, rest 90s",
     });
   });
 
@@ -138,6 +140,44 @@ describe.skipIf(!configured)("POST /api/bootstrap", () => {
       progress: 0,
       status: "pending",
     });
+  });
+
+  it("carries the activity's note, so the detail screen needs no extra request", async () => {
+    const state = asState((await callBootstrap(user.accessToken)).body);
+    expect(state.quests.find((q) => q.title === "Push-ups")?.notes).toBe("3 x 10, rest 90s");
+  });
+
+  it("orders a category's quests by when the activity was added, not alphabetically", async () => {
+    // A workout is performed in the order it was written down. Alphabetical ordering put
+    // "Warm-up" after "Bench Press", which is never what anyone means.
+    const ordered = await newUser("bootstrap-order");
+    const { data: category } = await admin
+      .from("categories")
+      .insert({
+        user_id: ordered.user.id,
+        name: "Push Day",
+        color: "#7C3AED",
+        icon: "star",
+        stat: "STR",
+      })
+      .select("id")
+      .single();
+
+    for (const name of ["Warm-up", "Bench Press", "Lateral Raises"]) {
+      const { error } = await admin.from("activities").insert({
+        category_id: category!.id,
+        user_id: ordered.user.id,
+        name,
+        metric_type: "checkbox",
+        target_value: { type: "checkbox" },
+        schedule: { kind: "daily" },
+        difficulty: "normal",
+      });
+      expect(error).toBeNull();
+    }
+
+    const state = asState((await callBootstrap(ordered.accessToken)).body);
+    expect(state.quests.map((q) => q.title)).toEqual(["Warm-up", "Bench Press", "Lateral Raises"]);
   });
 
   it("is idempotent: a second call returns the same board, not a duplicated one", async () => {

@@ -117,6 +117,7 @@ export interface MobileDatabase {
           target_value: ActivityTarget;
           schedule: Schedule;
           difficulty: Difficulty;
+          notes: string | null;
           archived: boolean;
           created_at: string;
         };
@@ -128,6 +129,7 @@ export interface MobileDatabase {
           target_value: ActivityTarget;
           schedule: Schedule;
           difficulty: Difficulty;
+          notes?: string | null;
         };
         // Mirrors what lib/activities.ts's editing/archiving actually
         // updates — never id/user_id/created_at (and category ownership is
@@ -140,6 +142,7 @@ export interface MobileDatabase {
           target_value: ActivityTarget;
           schedule: Schedule;
           difficulty: Difficulty;
+          notes: string | null;
           archived: boolean;
         }>;
         Relationships: [];

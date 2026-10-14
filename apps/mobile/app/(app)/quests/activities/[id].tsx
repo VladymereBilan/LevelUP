@@ -61,6 +61,7 @@ export default function EditActivityScreen() {
         target: values.target,
         schedule: values.schedule,
         difficulty: values.difficulty,
+        notes: values.notes,
       });
 
       invalidateBootstrapCache();
@@ -122,6 +123,7 @@ export default function EditActivityScreen() {
               target: activity.target_value,
               schedule: activity.schedule,
               difficulty: activity.difficulty,
+              notes: activity.notes,
             }}
             streakDays={streakDays}
             submitting={submitting}

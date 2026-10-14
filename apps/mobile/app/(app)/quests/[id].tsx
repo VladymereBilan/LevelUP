@@ -342,6 +342,36 @@ export default function QuestDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 0, gap: 24, flexGrow: 1 }}>
+        {/* Above the progress card on purpose: a note is what the player wrote to read at
+            this exact moment — the weights to lift, the chapter to open — so it comes before
+            the numbers rather than buried under them. */}
+        {item.notes ? (
+          <View
+            style={{
+              padding: 14,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "rgba(167,139,250,0.22)",
+              backgroundColor: "rgba(124,58,237,0.07)",
+              gap: 6,
+            }}
+          >
+            <Text
+              style={{
+                color: colors.violetLight,
+                fontSize: fontSizes.label,
+                fontWeight: "700",
+                letterSpacing: 1,
+              }}
+            >
+              NOTES
+            </Text>
+            <Text style={{ color: colors.text, fontSize: fontSizes.body, lineHeight: 20 }}>
+              {item.notes}
+            </Text>
+          </View>
+        ) : null}
+
         <View
           style={{
             flexDirection: "row",

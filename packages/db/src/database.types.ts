@@ -50,6 +50,7 @@ export type Database = {
           id: string;
           metric_type: string;
           name: string;
+          notes: string | null;
           schedule: Json;
           target_value: Json;
           user_id: string;
@@ -62,6 +63,7 @@ export type Database = {
           id?: string;
           metric_type: string;
           name: string;
+          notes?: string | null;
           schedule: Json;
           target_value: Json;
           user_id: string;
@@ -74,6 +76,7 @@ export type Database = {
           id?: string;
           metric_type?: string;
           name?: string;
+          notes?: string | null;
           schedule?: Json;
           target_value?: Json;
           user_id?: string;

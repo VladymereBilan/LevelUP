@@ -12,7 +12,12 @@ import { TitleDetailModal } from "../../components/TitleDetailModal";
 import { ApiError } from "../../lib/api";
 import { useSession } from "../../lib/AuthProvider";
 import { equipTitle, getMyProfile, type ProfileSummary } from "../../lib/profile";
-import { getLifetimeTotals, getStreakHeatmap, getWeeklyXpSummary } from "../../lib/statsProgress";
+import {
+  getLifetimeTotals,
+  getStreakCalendar,
+  getWeeklyXpSummary,
+  type StreakCalendar,
+} from "../../lib/statsProgress";
 import { getMyStats, type StatsRow } from "../../lib/stats";
 import { getMyStreak, type StreakRow } from "../../lib/streaks";
 import { listMyTitles, titleIcon, type TitleDisplay } from "../../lib/titles";
@@ -28,7 +33,7 @@ interface StatsData {
   weekDays: { label: string; xp: number }[];
   totalThisWeek: number;
   percentChangeFromPriorWeek: number | null;
-  heatmap: { date: string; level: 0 | 1 | 2 | 3 | 4 }[];
+  calendar: StreakCalendar;
   titles: TitleDisplay[];
 }
 
@@ -46,12 +51,12 @@ export default function StatsScreen() {
 
     try {
       const profile = await getMyProfile(userId);
-      const [stats, streak, lifetime, weekly, heatmap, titles] = await Promise.all([
+      const [stats, streak, lifetime, weekly, calendar, titles] = await Promise.all([
         getMyStats(userId),
         getMyStreak(userId),
         getLifetimeTotals(userId),
         getWeeklyXpSummary(userId, profile.timezone),
-        getStreakHeatmap(userId, profile.timezone),
+        getStreakCalendar(userId, profile.timezone),
         listMyTitles(userId),
       ]);
 
@@ -64,7 +69,7 @@ export default function StatsScreen() {
         weekDays: weekly.days.map((d) => ({ label: d.label, xp: d.xp })),
         totalThisWeek: weekly.totalThisWeek,
         percentChangeFromPriorWeek: weekly.percentChangeFromPriorWeek,
-        heatmap: heatmap.map((d) => ({ date: d.date, level: d.level })),
+        calendar,
         titles,
       });
       setError(null);
@@ -373,11 +378,9 @@ export default function StatsScreen() {
             </View>
             <StreakChip days={streak.current} />
           </View>
-          <Heatmap days={data.heatmap} />
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ color: colors.disabled, fontSize: fontSizes.label }}>5 weeks ago</Text>
-            <Text style={{ color: colors.disabled, fontSize: fontSizes.label }}>Today</Text>
-          </View>
+          {/* The range caption and the shading legend both live inside Heatmap now: the
+              old labels here described a left-to-right timeline the grid never had. */}
+          <Heatmap calendar={data.calendar} />
         </View>
 
         <View

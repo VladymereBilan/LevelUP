@@ -97,6 +97,13 @@ threshold, no game rule, and no date arithmetic. Before it, opening the app cost
 device-to-region round trips, most of them unavoidably serial. `POST /api/quests/generate`
 remains for builds already in the field.
 
+A completion's `source` decides its XP multiplier (`health` 1.0, `timer` 0.8, `manual` 0.6),
+and it describes what happened rather than how the activity is configured: the app claims a
+bonus source only when recorded progress actually reaches the target (`sourceForCompletion`),
+and the route downgrades any source the metric type could not have evidenced
+(`isSourcePossibleForMetric`). Completing by hand always works and always counts — it just
+pays the hand-logged rate, which is what the multipliers were for.
+
 Streak logic, the daily XP cap, and quest dates all use the user's **local** date
 (`getLocalDateString(now, profile.timezone)` from `@levelup/engine`), never the server's UTC day
 — a naive UTC date would misclassify completions near local midnight. This is also why
@@ -241,6 +248,22 @@ Known gaps, backend/game-rules:
   the local instance for the run (see `packages/db/README.md`). Earlier notes in this file and
   that README said there was no Docker; that is no longer true, and a new migration no longer
   has to ship on offline syntax-validation alone.
+- **The daily XP cap is not atomic.** `POST /api/quests/[id]/complete` reads the day's XP
+  total, clamps the award with `capDailyXp`, then writes — so concurrent completions all read
+  the same pre-write total and each award in full. With the 20/60s rate limit that is roughly
+  760 XP in one burst against a 500 cap; it self-corrects once the writes land, and no
+  leaderboard exists for it to buy an advantage over, which is why it is documented rather
+  than patched. A rate-limit tightening would only shrink it, not close it. The real fix is a
+  `reserve_daily_xp(user, local_date, amount, cap)` RPC doing an atomic upsert-and-return of
+  the granted amount before the route computes level/rank from it — the award has to be
+  decided inside one transaction, and it can't be moved into `complete_quest()` because the
+  level curve lives in the engine.
+- **Whether a timer genuinely ran is not verifiable server-side.** The completion route
+  downgrades a source a metric could never evidence (`SOURCES_BY_METRIC_TYPE`), and the app
+  only claims `timer`/`health` once recorded progress actually meets the target — but a
+  hand-written request can still claim `timer` on a minutes activity it never worked. Capped
+  by the daily ceiling and, being a single-player self-report app, it buys nothing from
+  anyone else. Real verification would need signed attestations from the health platform.
 - **No title-unlocking mechanism evaluates existing titles automatically on a schedule** —
   only on quest completion (`complete_quest()`) or a manual backfill run. A title added to the
   catalog after a player already qualifies for it needs `backfill-titles` run for them (or

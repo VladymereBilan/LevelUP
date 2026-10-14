@@ -19,6 +19,8 @@ export interface BootstrapQuest {
   stat: Stat;
   title: string;
   metricType: MetricType;
+  /** The activity's free-text note, shown on the quest detail screen. */
+  notes: string | null;
   target: ActivityTarget;
   difficulty: Difficulty;
   progress: number;

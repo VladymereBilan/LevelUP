@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError, apiFetch } from "./api";
+import { invalidateBootstrapCache, loadBootstrap, type BootstrapState } from "./bootstrap";
 
 /**
  * `lib/api` is mocked rather than imported through, because importing it
@@ -20,9 +22,6 @@ vi.mock("./api", () => {
   }
   return { ApiError, apiFetch: vi.fn() };
 });
-
-import { ApiError, apiFetch } from "./api";
-import { invalidateBootstrapCache, loadBootstrap, type BootstrapState } from "./bootstrap";
 
 const fetchMock = vi.mocked(apiFetch);
 

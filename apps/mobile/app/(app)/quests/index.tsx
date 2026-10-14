@@ -260,41 +260,87 @@ export default function QuestsScreen() {
             </Text>
           </View>
         ) : (
-          groups.map((group) => (
-            <View key={group.categoryId} className="mb-5">
-              <Text
-                style={{
-                  color: colors.muted,
-                  fontSize: fontSizes.label,
-                  fontWeight: "700",
-                  letterSpacing: 1.4,
-                  marginBottom: 10,
-                }}
-              >
-                {group.categoryName.toUpperCase()}
-              </Text>
-              {group.items.map((item) => {
-                const xp = calcQuestXp({
-                  difficulty: item.difficulty,
-                  source: bestCaseSourceForMetric(item.metricType),
-                  streakDays,
-                });
-                return (
-                  <QuestCard
-                    key={item.questId}
-                    title={item.title}
-                    progressLabel={formatProgressLabel(item.metricType, item.progress, item.target)}
-                    percent={progressPercent(item.metricType, item.progress, item.target)}
-                    xp={xp}
-                    difficulty={item.difficulty}
-                    icon={getCategoryIcon(item.categoryIcon)}
-                    complete={item.status === "completed"}
-                    onPress={() => router.push(`/quests/${item.questId}`)}
-                  />
-                );
-              })}
-            </View>
-          ))
+          groups.map((group) => {
+            // A category is how someone models a routine — "Push Day" with five exercises in
+            // it — so the header carries the routine's own progress. Without it the group was
+            // a bare caption and finishing a whole session read no differently from finishing
+            // one exercise of it.
+            const done = group.items.filter((item) => item.status === "completed").length;
+            const allDone = done === group.items.length;
+            return (
+              <View key={group.categoryId} className="mb-5">
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 10,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: colors.muted,
+                      fontSize: fontSizes.label,
+                      fontWeight: "700",
+                      letterSpacing: 1.4,
+                    }}
+                  >
+                    {group.categoryName.toUpperCase()}
+                  </Text>
+                  <View
+                    style={{
+                      flex: 1,
+                      height: 3,
+                      borderRadius: 2,
+                      overflow: "hidden",
+                      backgroundColor: "rgba(148,163,184,0.16)",
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: `${Math.round((done / group.items.length) * 100)}%`,
+                        height: "100%",
+                        backgroundColor: allDone ? colors.success : colors.violet,
+                      }}
+                    />
+                  </View>
+                  <Text
+                    style={{
+                      color: allDone ? colors.success : colors.muted,
+                      fontSize: fontSizes.label,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {done}/{group.items.length}
+                  </Text>
+                </View>
+                {group.items.map((item) => {
+                  const xp = calcQuestXp({
+                    difficulty: item.difficulty,
+                    source: bestCaseSourceForMetric(item.metricType),
+                    streakDays,
+                  });
+                  return (
+                    <QuestCard
+                      key={item.questId}
+                      title={item.title}
+                      progressLabel={formatProgressLabel(
+                        item.metricType,
+                        item.progress,
+                        item.target,
+                      )}
+                      percent={progressPercent(item.metricType, item.progress, item.target)}
+                      xp={xp}
+                      difficulty={item.difficulty}
+                      icon={getCategoryIcon(item.categoryIcon)}
+                      complete={item.status === "completed"}
+                      onPress={() => router.push(`/quests/${item.questId}`)}
+                    />
+                  );
+                })}
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>

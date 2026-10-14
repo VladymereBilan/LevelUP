@@ -39,8 +39,17 @@ interface SeededQuest {
 async function seedQuest(
   admin: SupabaseClient<Database>,
   userId: string,
-  opts: { stat: Stat; difficulty: Difficulty; date: string },
+  opts: {
+    stat: Stat;
+    difficulty: Difficulty;
+    date: string;
+    /** Defaults to checkbox. Set it when the test needs a metric that can evidence a
+     * device-measured source — the route downgrades a claim the metric couldn't produce. */
+    metricType?: "checkbox" | "steps";
+  },
 ): Promise<SeededQuest> {
+  const target =
+    opts.metricType === "steps" ? { type: "steps", steps: 5000 } : { type: "checkbox" };
   const { data: category, error: categoryError } = await admin
     .from("categories")
     .insert({
@@ -61,8 +70,8 @@ async function seedQuest(
       category_id: category.id,
       user_id: userId,
       name: "Test Activity",
-      metric_type: "checkbox",
-      target_value: { type: "checkbox" },
+      metric_type: opts.metricType ?? "checkbox",
+      target_value: target,
       schedule: { kind: "daily" },
       difficulty: opts.difficulty,
     })
@@ -77,7 +86,7 @@ async function seedQuest(
       user_id: userId,
       activity_id: activity.id,
       date: opts.date,
-      target: { type: "checkbox" },
+      target,
     })
     .select("id")
     .single();
@@ -200,6 +209,9 @@ describe.skipIf(!configured)("POST /api/quests/[id]/complete", () => {
       stat: "FOCUS",
       difficulty: "hard",
       date: "2026-01-01",
+      // A steps quest can evidence "health"; a checkbox quest cannot, and claiming it there
+      // is what this route now refuses — see the downgrade test below.
+      metricType: "steps",
     });
 
     const { status, body } = await callComplete(questId, a.accessToken, { source: "health" });
@@ -211,6 +223,24 @@ describe.skipIf(!configured)("POST /api/quests/[id]/complete", () => {
     expect(body.levelsGained).toBe(1);
     expect(body.level).toBe(2);
     expect(body.xp).toBe(21);
+  });
+
+  it("downgrades a source the activity could never have evidenced", async () => {
+    // A checkbox quest has no timer and no GPS, so "health" — the highest multiplier in the
+    // game — is not a claim it can make. Before this, tapping Complete on a hard checkbox
+    // quest while claiming health paid 31 XP; it now pays the hand-logged 18.
+    const a = await newUser("complete-source-downgrade");
+    const { questId } = await seedQuest(admin, a.user.id, {
+      stat: "FOCUS",
+      difficulty: "hard",
+      date: "2026-01-01",
+    });
+
+    const { status, body } = await callComplete(questId, a.accessToken, { source: "health" });
+
+    expect(status).toBe(200);
+    // round(20 * 1.5 hard * 0.6 manual * 1.025) = 18, not the 31 that health would pay.
+    expect(body.xpAwarded).toBe(18);
   });
 
   it("caps the XP award once the daily cap is reached, but still completes the quest", async () => {
