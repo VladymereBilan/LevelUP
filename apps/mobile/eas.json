@@ -11,6 +11,16 @@
     "preview": {
       "distribution": "internal"
     },
+    "measure": {
+      "distribution": "internal",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_BOOT_TRACE": "1"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "distribution": "store",
