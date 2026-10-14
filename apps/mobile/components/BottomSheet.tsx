@@ -43,9 +43,21 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
     }
   }, [visible, sheetHeight, translateY]);
 
+  // Opening only. Closing belongs to the effect above, and this one used to
+  // reach into it: on the render where `visible` flipped to false, both effects
+  // ran, and the bare `translateY.value = sheetHeight` here cancelled the
+  // withTiming started there. A cancelled Reanimated animation calls back with
+  // finished === false, so `setMounted(false)` never ran — leaving the Modal up
+  // with its full-screen backdrop over an app that could no longer be tapped,
+  // and no state left to change that would re-render it. Every dismissal path
+  // hit it: Cancel, the backdrop, the drag, and the hardware back button.
+  //
+  // Nothing parks the sheet off-screen for the next open, because the closing
+  // animation already leaves it exactly there.
   useEffect(() => {
+    if (!visible) return;
     if (mounted && sheetHeight > 0) {
-      translateY.value = visible ? withSpring(0, SPRING_CONFIG) : sheetHeight;
+      translateY.value = withSpring(0, SPRING_CONFIG);
     }
   }, [mounted, sheetHeight, visible, translateY]);
 
