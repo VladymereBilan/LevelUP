@@ -29,7 +29,7 @@ import {
   startRunTracking,
   type RunTracker,
 } from "../../../lib/runTracking";
-import { colors, fonts, gradient } from "../../../theme/tokens";
+import { colors, fontSizes, fonts, gradient } from "../../../theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
 
 function targetStepCount(item: QuestBoardItem): number {
@@ -327,7 +327,13 @@ export default function QuestDetailScreen() {
         >
           <Icon name="arrow" size={16} color={colors.muted} />
         </Pressable>
-        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+        <Text
+          style={{
+            color: colors.text,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: fontSizes.bodyLarge,
+          }}
+        >
           {item.title}
         </Text>
       </View>
@@ -345,14 +351,21 @@ export default function QuestDetailScreen() {
           }}
         >
           <View>
-            <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: fontSizes.label,
+                fontWeight: "700",
+                letterSpacing: 1,
+              }}
+            >
               PROGRESS
             </Text>
             <Text
               style={{
                 color: colors.text,
                 fontFamily: fonts.displaySemiBold,
-                fontSize: 15,
+                fontSize: fontSizes.bodyLarge,
                 marginTop: 4,
               }}
             >
@@ -414,7 +427,7 @@ export default function QuestDetailScreen() {
         item.metricType === "steps" ? (
           <View style={{ alignItems: "center", gap: 16, paddingVertical: 12 }}>
             {item.target.type === "sets_reps_weight" ? (
-              <Text style={{ color: colors.muted, fontSize: 11 }}>
+              <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
                 {item.target.reps} reps{item.target.weightKg ? ` x ${item.target.weightKg}kg` : ""}{" "}
                 per set
               </Text>
@@ -479,7 +492,9 @@ export default function QuestDetailScreen() {
               {runTracking ? "Stop Run" : "Start Run"}
             </Button>
             {runError ? (
-              <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>
+              <Text
+                style={{ color: colors.danger, fontSize: fontSizes.caption, textAlign: "center" }}
+              >
                 {runError}
               </Text>
             ) : null}
@@ -503,7 +518,9 @@ export default function QuestDetailScreen() {
         </View>
 
         {error ? (
-          <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>{error}</Text>
+          <Text style={{ color: colors.danger, fontSize: fontSizes.caption, textAlign: "center" }}>
+            {error}
+          </Text>
         ) : null}
 
         <View style={{ marginTop: "auto" }}>
@@ -519,7 +536,11 @@ export default function QuestDetailScreen() {
               }}
             >
               <Text
-                style={{ color: colors.success, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+                style={{
+                  color: colors.success,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.body,
+                }}
               >
                 Already completed
               </Text>
@@ -540,18 +561,18 @@ export default function QuestDetailScreen() {
                   style={{
                     color: colors.violetLight,
                     fontFamily: fonts.displaySemiBold,
-                    fontSize: 15,
+                    fontSize: fontSizes.bodyLarge,
                   }}
                 >
                   +{xpBreakdown.total} XP
                 </Text>
-                <Text style={{ color: colors.muted, fontSize: 11 }}>
+                <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
                   {XP_SOURCE_HINT[xpBreakdown.source]}
                 </Text>
                 <Text
                   style={{
                     color: colors.disabled,
-                    fontSize: 10,
+                    fontSize: fontSizes.label,
                     textDecorationLine: "underline",
                   }}
                 >

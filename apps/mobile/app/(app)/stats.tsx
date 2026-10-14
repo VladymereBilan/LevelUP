@@ -17,7 +17,7 @@ import { getMyStats, type StatsRow } from "../../lib/stats";
 import { getMyStreak, type StreakRow } from "../../lib/streaks";
 import { listMyTitles, titleIcon, type TitleDisplay } from "../../lib/titles";
 import { useFocusLoad } from "../../lib/useFocusLoad";
-import { colors, fonts } from "../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../theme/tokens";
 
 interface StatsData {
   profile: ProfileSummary;
@@ -154,7 +154,13 @@ export default function StatsScreen() {
           />
         }
       >
-        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 22 }}>
+        <Text
+          style={{
+            color: colors.text,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: fontSizes.title,
+          }}
+        >
           Stats &amp; Progress
         </Text>
 
@@ -170,13 +176,26 @@ export default function StatsScreen() {
               gap: 4,
             }}
           >
-            <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: fontSizes.label,
+                fontWeight: "700",
+                letterSpacing: 1,
+              }}
+            >
               TOTAL XP
             </Text>
-            <Text style={{ color: colors.text, fontFamily: fonts.displayBold, fontSize: 22 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontFamily: fonts.displayBold,
+                fontSize: fontSizes.title,
+              }}
+            >
               {totalXp.toLocaleString()}
             </Text>
-            <Text style={{ color: colors.muted, fontSize: 10 }}>
+            <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
               {data.percentChangeFromPriorWeek === null ? (
                 "This week"
               ) : (
@@ -205,13 +224,26 @@ export default function StatsScreen() {
               gap: 4,
             }}
           >
-            <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: fontSizes.label,
+                fontWeight: "700",
+                letterSpacing: 1,
+              }}
+            >
               QUESTS DONE
             </Text>
-            <Text style={{ color: colors.text, fontFamily: fonts.displayBold, fontSize: 22 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontFamily: fonts.displayBold,
+                fontSize: fontSizes.title,
+              }}
+            >
               {questsDone.toLocaleString()}
             </Text>
-            <Text style={{ color: colors.muted, fontSize: 10 }}>Since awakening</Text>
+            <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>Since awakening</Text>
           </View>
         </View>
 
@@ -234,19 +266,34 @@ export default function StatsScreen() {
           >
             <View>
               <Text
-                style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}
+                style={{
+                  color: colors.muted,
+                  fontSize: fontSizes.label,
+                  fontWeight: "700",
+                  letterSpacing: 1,
+                }}
               >
                 WEEKLY ACTIVITY
               </Text>
-              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.body,
+                }}
+              >
                 XP earned
               </Text>
             </View>
             <Text
-              style={{ color: colors.violetLight, fontFamily: fonts.displaySemiBold, fontSize: 15 }}
+              style={{
+                color: colors.violetLight,
+                fontFamily: fonts.displaySemiBold,
+                fontSize: fontSizes.bodyLarge,
+              }}
             >
               {totalThisWeek.toLocaleString()}{" "}
-              <Text style={{ color: colors.muted, fontSize: 10 }}>XP</Text>
+              <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>XP</Text>
             </Text>
           </View>
           <BarChart data={weekDays.map((d) => ({ label: d.label, value: d.xp }))} />
@@ -266,11 +313,22 @@ export default function StatsScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}>
             <View>
               <Text
-                style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}
+                style={{
+                  color: colors.muted,
+                  fontSize: fontSizes.label,
+                  fontWeight: "700",
+                  letterSpacing: 1,
+                }}
               >
                 ATTRIBUTE BALANCE
               </Text>
-              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.body,
+                }}
+              >
                 Core stats
               </Text>
             </View>
@@ -294,11 +352,22 @@ export default function StatsScreen() {
           >
             <View>
               <Text
-                style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}
+                style={{
+                  color: colors.muted,
+                  fontSize: fontSizes.label,
+                  fontWeight: "700",
+                  letterSpacing: 1,
+                }}
               >
                 CONSISTENCY
               </Text>
-              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.body,
+                }}
+              >
                 Streak calendar
               </Text>
             </View>
@@ -306,23 +375,30 @@ export default function StatsScreen() {
           </View>
           <Heatmap days={data.heatmap} />
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ color: colors.disabled, fontSize: 9 }}>5 weeks ago</Text>
-            <Text style={{ color: colors.disabled, fontSize: 9 }}>Today</Text>
+            <Text style={{ color: colors.disabled, fontSize: fontSizes.label }}>5 weeks ago</Text>
+            <Text style={{ color: colors.disabled, fontSize: fontSizes.label }}>Today</Text>
           </View>
         </View>
 
         <View
           style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}
         >
-          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.4 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.4,
+            }}
+          >
             TITLES UNLOCKED
           </Text>
-          <Text style={{ color: colors.muted, fontSize: 10 }}>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
             {unlockedCount} of {data.titles.length}
           </Text>
         </View>
         {equipError ? (
-          <Text style={{ color: colors.danger, fontSize: 11, textAlign: "center" }}>
+          <Text style={{ color: colors.danger, fontSize: fontSizes.label, textAlign: "center" }}>
             {equipError}
           </Text>
         ) : null}
@@ -357,11 +433,15 @@ export default function StatsScreen() {
                   <Icon name={titleIcon(title.unlockRule)} size={15} color={colors.violetLight} />
                 </View>
                 <Text
-                  style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 12 }}
+                  style={{
+                    color: colors.text,
+                    fontFamily: fonts.displaySemiBold,
+                    fontSize: fontSizes.caption,
+                  }}
                 >
                   {title.name}
                 </Text>
-                <Text style={{ color: colors.muted, fontSize: 9 }}>
+                <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
                   {equipped ? "Equipped" : title.unlocked ? "Unlocked" : "Locked"}
                 </Text>
               </Pressable>

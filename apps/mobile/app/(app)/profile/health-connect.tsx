@@ -15,7 +15,7 @@ import {
 import { invalidateBootstrapCache, loadBootstrap } from "../../../lib/bootstrap";
 import { type QuestBoardItem } from "../../../lib/questBoard";
 import { completeQuest } from "../../../lib/quests";
-import { colors, fonts } from "../../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../../theme/tokens";
 
 type SyncState = "checking" | "unavailable" | "disconnected" | "connected";
 
@@ -102,7 +102,13 @@ export default function HealthConnectScreen() {
         >
           <Icon name="arrow" size={16} color={colors.muted} />
         </Pressable>
-        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+        <Text
+          style={{
+            color: colors.text,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: fontSizes.bodyLarge,
+          }}
+        >
           Health Connect
         </Text>
       </View>
@@ -111,7 +117,7 @@ export default function HealthConnectScreen() {
         {state === "checking" ? <ActivityIndicator color={colors.violet} /> : null}
 
         {state === "unavailable" ? (
-          <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.body, lineHeight: 20 }}>
             Health Connect isn&apos;t available on this device. It requires Android, and the Health
             Connect app installed from Google Play.
           </Text>
@@ -119,7 +125,7 @@ export default function HealthConnectScreen() {
 
         {state === "disconnected" ? (
           <View style={{ gap: 12 }}>
-            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>
+            <Text style={{ color: colors.muted, fontSize: fontSizes.body, lineHeight: 20 }}>
               Connect Health Connect to sync steps and exercise sessions into matching quests. Only
               step counts and exercise session times are read — nothing is written back to Health
               Connect.
@@ -142,11 +148,13 @@ export default function HealthConnectScreen() {
                 gap: 8,
               }}
             >
-              <Text style={{ color: colors.muted, fontSize: 10, fontWeight: "700" }}>TODAY</Text>
+              <Text style={{ color: colors.muted, fontSize: fontSizes.label, fontWeight: "700" }}>
+                TODAY
+              </Text>
               <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 18 }}>
                 {todaySteps.toLocaleString()} steps
               </Text>
-              <Text style={{ color: colors.text, fontSize: 13 }}>
+              <Text style={{ color: colors.text, fontSize: fontSizes.body }}>
                 {sessions.length} exercise session{sessions.length === 1 ? "" : "s"} (
                 {totalExerciseMinutes} min total)
               </Text>
@@ -154,12 +162,17 @@ export default function HealthConnectScreen() {
 
             <View style={{ gap: 10 }}>
               <Text
-                style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1 }}
+                style={{
+                  color: colors.muted,
+                  fontSize: fontSizes.label,
+                  fontWeight: "700",
+                  letterSpacing: 1,
+                }}
               >
                 SYNC TO QUESTS
               </Text>
               {eligibleQuests.length === 0 ? (
-                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                <Text style={{ color: colors.muted, fontSize: fontSizes.caption }}>
                   No pending steps or minutes quests to sync right now.
                 </Text>
               ) : (
@@ -184,12 +197,12 @@ export default function HealthConnectScreen() {
                           style={{
                             color: colors.text,
                             fontFamily: fonts.bodySemiBold,
-                            fontSize: 13,
+                            fontSize: fontSizes.body,
                           }}
                         >
                           {item.title}
                         </Text>
-                        <Text style={{ color: colors.muted, fontSize: 11 }}>
+                        <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
                           {progress} {item.metricType === "steps" ? "steps" : "min"} available
                         </Text>
                       </View>
@@ -215,7 +228,7 @@ export default function HealthConnectScreen() {
                             style={{
                               color: colors.violetLight,
                               fontFamily: fonts.bodySemiBold,
-                              fontSize: 12,
+                              fontSize: fontSizes.caption,
                             }}
                           >
                             Sync
@@ -231,7 +244,9 @@ export default function HealthConnectScreen() {
         ) : null}
 
         {error ? (
-          <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>{error}</Text>
+          <Text style={{ color: colors.danger, fontSize: fontSizes.caption, textAlign: "center" }}>
+            {error}
+          </Text>
         ) : null}
       </ScrollView>
     </SafeAreaView>

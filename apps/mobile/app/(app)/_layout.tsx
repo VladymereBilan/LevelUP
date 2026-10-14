@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { TabIcon } from "../../components/TabIcon";
-import { colors, fonts } from "../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../theme/tokens";
 
 export default function AppLayout() {
   return (
@@ -10,7 +10,11 @@ export default function AppLayout() {
         tabBarShowLabel: true,
         tabBarActiveTintColor: colors.violetLight,
         tabBarInactiveTintColor: colors.disabled,
-        tabBarLabelStyle: { fontSize: 9, fontFamily: fonts.bodySemiBold, marginTop: 2 },
+        tabBarLabelStyle: {
+          fontSize: fontSizes.label,
+          fontFamily: fonts.bodySemiBold,
+          marginTop: 2,
+        },
         tabBarStyle: {
           height: 76,
           paddingTop: 10,

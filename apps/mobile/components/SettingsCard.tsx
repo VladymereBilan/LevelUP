@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 import { Icon, type IconName } from "./Icon";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 /** The rounded, bordered card every settings section sits in (Profile's Settings rows,
  * the Notifications sub-screen). */
@@ -42,11 +42,15 @@ export function SettingsToggleRow({
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
       {icon ? <Icon name={icon} size={17} color={colors.violetLight} /> : null}
       <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.text, fontSize: 13, fontFamily: fonts.bodySemiBold }}>
+        <Text
+          style={{ color: colors.text, fontSize: fontSizes.body, fontFamily: fonts.bodySemiBold }}
+        >
           {label}
         </Text>
         {subtitle ? (
-          <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }}>{subtitle}</Text>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.label, marginTop: 1 }}>
+            {subtitle}
+          </Text>
         ) : null}
       </View>
       <Switch
@@ -76,11 +80,15 @@ export function SettingsNavRow({ icon, label, subtitle, onPress }: SettingsNavRo
     >
       <Icon name={icon} size={17} color={colors.violetLight} />
       <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.text, fontSize: 13, fontFamily: fonts.bodySemiBold }}>
+        <Text
+          style={{ color: colors.text, fontSize: fontSizes.body, fontFamily: fonts.bodySemiBold }}
+        >
           {label}
         </Text>
         {subtitle ? (
-          <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }}>{subtitle}</Text>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.label, marginTop: 1 }}>
+            {subtitle}
+          </Text>
         ) : null}
       </View>
       <Icon name="arrow" size={14} color={colors.muted} />

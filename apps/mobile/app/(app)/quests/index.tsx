@@ -22,7 +22,7 @@ import {
   questSourceForMetric,
 } from "../../../lib/questFormat";
 import { useFocusLoad, type LoadMode } from "../../../lib/useFocusLoad";
-import { colors, fonts } from "../../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../../theme/tokens";
 
 interface CategoryGroup {
   categoryId: string;
@@ -130,7 +130,7 @@ export default function QuestsScreen() {
               flex: 1,
               color: colors.text,
               fontFamily: fonts.displaySemiBold,
-              fontSize: 22,
+              fontSize: fontSizes.title,
             }}
           >
             Today&apos;s Quests
@@ -170,7 +170,9 @@ export default function QuestsScreen() {
         {error && !groups ? (
           <View style={{ alignItems: "center", gap: 10, paddingVertical: 40 }}>
             <Icon name="quest" size={28} color={colors.danger} />
-            <Text style={{ color: colors.danger, fontSize: 13, textAlign: "center" }}>{error}</Text>
+            <Text style={{ color: colors.danger, fontSize: fontSizes.body, textAlign: "center" }}>
+              {error}
+            </Text>
           </View>
         ) : !hasAnyActivities && (!groups || groups.length === 0) ? (
           <View style={{ alignItems: "center", gap: 14, paddingVertical: 48 }}>
@@ -180,14 +182,29 @@ export default function QuestsScreen() {
             >
               <Icon name="quest" size={24} color={colors.violetLight} />
             </View>
-            <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontFamily: fonts.displaySemiBold,
+                fontSize: fontSizes.bodyLarge,
+              }}
+            >
               No activities yet
             </Text>
-            <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", maxWidth: 260 }}>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: fontSizes.label,
+                textAlign: "center",
+                maxWidth: 260,
+              }}
+            >
               Choose a template to start with ready-made quests, or build your own.
             </Text>
             {error ? (
-              <Text style={{ color: colors.danger, fontSize: 11, textAlign: "center" }}>
+              <Text
+                style={{ color: colors.danger, fontSize: fontSizes.label, textAlign: "center" }}
+              >
                 {error}
               </Text>
             ) : null}
@@ -222,10 +239,23 @@ export default function QuestsScreen() {
             >
               <Icon name="quest" size={24} color={colors.violetLight} />
             </View>
-            <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontFamily: fonts.displaySemiBold,
+                fontSize: fontSizes.bodyLarge,
+              }}
+            >
               No quests today
             </Text>
-            <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", maxWidth: 260 }}>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: fontSizes.label,
+                textAlign: "center",
+                maxWidth: 260,
+              }}
+            >
               Nothing scheduled for today. Add another activity, or check back tomorrow.
             </Text>
           </View>
@@ -235,7 +265,7 @@ export default function QuestsScreen() {
               <Text
                 style={{
                   color: colors.muted,
-                  fontSize: 9,
+                  fontSize: fontSizes.label,
                   fontWeight: "700",
                   letterSpacing: 1.4,
                   marginBottom: 10,

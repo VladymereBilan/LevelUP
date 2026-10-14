@@ -18,7 +18,7 @@ import type { StatsRow } from "../../lib/stats";
 import type { StreakRow } from "../../lib/streaks";
 import { initials } from "../../lib/questFormat";
 import { useFocusLoad } from "../../lib/useFocusLoad";
-import { colors, fonts } from "../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../theme/tokens";
 
 interface HomeData {
   profile: ProfileSummary;
@@ -131,21 +131,40 @@ export default function HomeScreen() {
                 backgroundColor: "#241a3f",
               }}
             >
-              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 12 }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.caption,
+                }}
+              >
                 {initials(profile.username)}
               </Text>
             </View>
             <View className="gap-0.5">
               <Text
-                style={{ color: colors.muted, fontSize: 8, fontWeight: "700", letterSpacing: 1.3 }}
+                style={{
+                  color: colors.muted,
+                  fontSize: fontSizes.label,
+                  fontWeight: "700",
+                  letterSpacing: 1.3,
+                }}
               >
                 WELCOME BACK
               </Text>
-              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.bodyLarge,
+                }}
+              >
                 {profile.username}
               </Text>
               {equippedTitleName ? (
-                <Text style={{ color: colors.violetLight, fontSize: 9 }}>{equippedTitleName}</Text>
+                <Text style={{ color: colors.violetLight, fontSize: fontSizes.label }}>
+                  {equippedTitleName}
+                </Text>
               ) : null}
             </View>
           </View>
@@ -161,23 +180,40 @@ export default function HomeScreen() {
             <View className="flex-row items-center gap-1.5">
               <RankChip rank={profile.rank} />
               <Text
-                style={{ color: colors.muted, fontSize: 8, fontWeight: "700", letterSpacing: 0.8 }}
+                style={{
+                  color: colors.muted,
+                  fontSize: fontSizes.label,
+                  fontWeight: "700",
+                  letterSpacing: 0.8,
+                }}
               >
                 PLAYER RANK
               </Text>
             </View>
-            <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 17 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontFamily: fonts.displaySemiBold,
+                fontSize: fontSizes.heading,
+              }}
+            >
               Keep climbing.
             </Text>
             <View className="flex-row justify-between">
-              <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 9 }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.body,
+                }}
+              >
                 {profile.xp.toLocaleString()} / {xpMax.toLocaleString()} XP
               </Text>
               <Text
                 style={{
                   color: colors.violetLight,
                   fontFamily: fonts.displaySemiBold,
-                  fontSize: 9,
+                  fontSize: fontSizes.label,
                 }}
               >
                 {Math.round((profile.xp / xpMax) * 100)}%
@@ -185,7 +221,12 @@ export default function HomeScreen() {
             </View>
             <XpBar current={profile.xp} max={xpMax} />
             <Text
-              style={{ color: colors.disabled, fontSize: 7, fontWeight: "700", letterSpacing: 0.6 }}
+              style={{
+                color: colors.disabled,
+                fontSize: fontSizes.label,
+                fontWeight: "700",
+                letterSpacing: 0.6,
+              }}
             >
               {Math.max(0, xpMax - profile.xp).toLocaleString()} XP TO LEVEL{" "}
               {String(profile.level + 1).padStart(2, "0")}
@@ -194,7 +235,14 @@ export default function HomeScreen() {
         </View>
 
         <View className="mb-2.5 mt-6 flex-row items-center justify-between px-0.5">
-          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.4 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.4,
+            }}
+          >
             CORE STATS
           </Text>
         </View>
@@ -208,7 +256,14 @@ export default function HomeScreen() {
         </View>
 
         <View className="mb-2.5 mt-6 flex-row items-center justify-between px-0.5">
-          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.4 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.4,
+            }}
+          >
             TODAY&apos;S QUESTS
           </Text>
         </View>
@@ -231,12 +286,18 @@ export default function HomeScreen() {
             />
           </View>
           <View className="min-w-0 flex-1 gap-1">
-            <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 11 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontFamily: fonts.displaySemiBold,
+                fontSize: fontSizes.body,
+              }}
+            >
               {questsTotal === 0
                 ? "No quests scheduled today"
                 : `${questsCompleted} of ${questsTotal} completed`}
             </Text>
-            <Text style={{ color: colors.muted, fontSize: 9 }}>
+            <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
               {questsTotal === 0
                 ? "Add activities to see quests here."
                 : questsCompleted === questsTotal

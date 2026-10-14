@@ -15,7 +15,7 @@ import { listMyCategories, type CategoryRow } from "../../../../lib/categories";
 import { invalidateBootstrapCache } from "../../../../lib/bootstrap";
 import { getCategoryIcon } from "../../../../lib/questFormat";
 import { useFocusLoad, type LoadMode } from "../../../../lib/useFocusLoad";
-import { colors, fonts } from "../../../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../../../theme/tokens";
 
 const WEEKDAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -91,7 +91,12 @@ export default function ManageActivitiesScreen() {
           <Icon name="arrow" size={16} color={colors.muted} />
         </Pressable>
         <Text
-          style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15, flex: 1 }}
+          style={{
+            color: colors.text,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: fontSizes.bodyLarge,
+            flex: 1,
+          }}
         >
           Manage Activities
         </Text>
@@ -126,13 +131,19 @@ export default function ManageActivitiesScreen() {
           contentContainerStyle={{ padding: 20, paddingTop: 0, paddingBottom: 40, flexGrow: 1 }}
         >
           {error ? (
-            <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>{error}</Text>
+            <Text
+              style={{ color: colors.danger, fontSize: fontSizes.caption, textAlign: "center" }}
+            >
+              {error}
+            </Text>
           ) : null}
 
           {!error && activities && activities.length === 0 ? (
             <View style={{ alignItems: "center", gap: 10, paddingVertical: 60 }}>
               <Icon name="quest" size={24} color={colors.disabled} />
-              <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center" }}>
+              <Text
+                style={{ color: colors.muted, fontSize: fontSizes.caption, textAlign: "center" }}
+              >
                 {showArchived ? "No archived activities." : "No activities yet."}
               </Text>
             </View>
@@ -174,11 +185,15 @@ export default function ManageActivitiesScreen() {
                 </View>
                 <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                   <Text
-                    style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+                    style={{
+                      color: colors.text,
+                      fontFamily: fonts.displaySemiBold,
+                      fontSize: fontSizes.body,
+                    }}
                   >
                     {activity.name}
                   </Text>
-                  <Text style={{ color: colors.muted, fontSize: 10 }}>
+                  <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
                     {category?.name ?? "Uncategorized"} - {scheduleSummary(activity.schedule)}
                   </Text>
                 </View>

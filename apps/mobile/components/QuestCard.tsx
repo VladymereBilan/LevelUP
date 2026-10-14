@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import type { Difficulty } from "@levelup/engine";
 import { Icon, type IconName } from "./Icon";
-import { colors, difficultyColors, fonts, gradient } from "../theme/tokens";
+import { colors, difficultyColors, fontSizes, fonts, gradient } from "../theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
 
 interface QuestCardProps {
@@ -66,7 +66,7 @@ export function QuestCard({
           style={{
             color: colors.text,
             fontFamily: fonts.displaySemiBold,
-            fontSize: 13,
+            fontSize: fontSizes.body,
             textDecorationLine: complete ? "line-through" : "none",
             textDecorationColor: colors.disabled,
           }}
@@ -74,8 +74,8 @@ export function QuestCard({
           {title}
         </Text>
         <View className="flex-row justify-between">
-          <Text style={{ color: colors.muted, fontSize: 10 }}>{progressLabel}</Text>
-          <Text style={{ color: colors.muted, fontSize: 10 }}>{percent}%</Text>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>{progressLabel}</Text>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>{percent}%</Text>
         </View>
         <View
           className="h-1 overflow-hidden rounded-full"
@@ -96,7 +96,7 @@ export function QuestCard({
               borderRadius: 5,
               paddingHorizontal: 6,
               paddingVertical: 3,
-              fontSize: 9,
+              fontSize: fontSizes.label,
               fontWeight: "700",
             }}
           >
@@ -107,7 +107,7 @@ export function QuestCard({
               marginLeft: "auto",
               color: colors.violetLight,
               fontFamily: fonts.displaySemiBold,
-              fontSize: 10,
+              fontSize: fontSizes.label,
             }}
           >
             +{xp} XP

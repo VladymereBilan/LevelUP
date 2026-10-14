@@ -6,7 +6,7 @@ import { Icon, type IconName } from "../../components/Icon";
 import { Button } from "../../components/Button";
 import { listChallenges, type ChallengeRow, type ChallengeStatus } from "../../lib/challenges";
 import { useFocusLoad } from "../../lib/useFocusLoad";
-import { colors, fonts, gradient } from "../../theme/tokens";
+import { colors, fontSizes, fonts, gradient } from "../../theme/tokens";
 
 type Tab = "active" | "upcoming" | "ended";
 
@@ -151,14 +151,19 @@ export default function ChallengesScreen() {
       >
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Text
-            style={{ flex: 1, color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 22 }}
+            style={{
+              flex: 1,
+              color: colors.text,
+              fontFamily: fonts.displaySemiBold,
+              fontSize: fontSizes.title,
+            }}
           >
             Challenges
           </Text>
           <Text
             style={{
               color: colors.violetLight,
-              fontSize: 9,
+              fontSize: fontSizes.label,
               fontWeight: "700",
               letterSpacing: 0.8,
               backgroundColor: "rgba(124,58,237,0.14)",
@@ -172,7 +177,14 @@ export default function ChallengesScreen() {
         </View>
 
         <View>
-          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.4 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.4,
+            }}
+          >
             PUSH PAST YOUR LIMITS
           </Text>
           <Text
@@ -185,7 +197,7 @@ export default function ChallengesScreen() {
           >
             Claim greater rewards.
           </Text>
-          <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.label, marginTop: 4 }}>
             Limited-time objectives built to test your consistency.
           </Text>
         </View>
@@ -209,7 +221,7 @@ export default function ChallengesScreen() {
                 <Text
                   style={{
                     color: selected ? colors.text : colors.muted,
-                    fontSize: 12,
+                    fontSize: fontSizes.caption,
                     fontFamily: selected ? fonts.bodySemiBold : fonts.body,
                   }}
                 >
@@ -221,13 +233,15 @@ export default function ChallengesScreen() {
         </View>
 
         {error ? (
-          <Text style={{ color: colors.danger, fontSize: 11, textAlign: "center" }}>{error}</Text>
+          <Text style={{ color: colors.danger, fontSize: fontSizes.label, textAlign: "center" }}>
+            {error}
+          </Text>
         ) : null}
 
         {visible.length === 0 ? (
           <View style={{ alignItems: "center", gap: 10, paddingVertical: 48 }}>
             <Icon name="trophy" size={24} color={colors.disabled} />
-            <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center" }}>
+            <Text style={{ color: colors.muted, fontSize: fontSizes.caption, textAlign: "center" }}>
               No {TAB_LABELS[tab].toLowerCase()} challenges right now.
             </Text>
           </View>
@@ -277,34 +291,46 @@ export default function ChallengesScreen() {
                     <Text
                       style={{
                         color: tone.color,
-                        fontSize: 9,
+                        fontSize: fontSizes.label,
                         fontWeight: "700",
                         letterSpacing: 0.6,
                       }}
                     >
                       {tier} CHALLENGE
                     </Text>
-                    <Text style={{ color: colors.muted, fontSize: 10, marginTop: 2 }}>
+                    <Text style={{ color: colors.muted, fontSize: fontSizes.label, marginTop: 2 }}>
                       {statusLabel(challenge, now)}
                     </Text>
                   </View>
                 </View>
 
                 <Text
-                  style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}
+                  style={{
+                    color: colors.text,
+                    fontFamily: fonts.displaySemiBold,
+                    fontSize: fontSizes.bodyLarge,
+                  }}
                 >
                   {challenge.name}
                 </Text>
                 {challenge.description ? (
-                  <Text style={{ color: colors.muted, fontSize: 11 }}>{challenge.description}</Text>
+                  <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+                    {challenge.description}
+                  </Text>
                 ) : null}
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700" }}>
+                  <Text
+                    style={{ color: colors.muted, fontSize: fontSizes.label, fontWeight: "700" }}
+                  >
                     PROGRESS
                   </Text>
                   <Text
-                    style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 11 }}
+                    style={{
+                      color: colors.text,
+                      fontFamily: fonts.displaySemiBold,
+                      fontSize: fontSizes.body,
+                    }}
                   >
                     {challenge.progress} / {challenge.targetValue} QUESTS
                   </Text>
@@ -334,12 +360,12 @@ export default function ChallengesScreen() {
                   }}
                 >
                   <View>
-                    <Text style={{ color: colors.muted, fontSize: 9 }}>REWARD</Text>
+                    <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>REWARD</Text>
                     <Text
                       style={{
                         color: colors.violetLight,
                         fontFamily: fonts.displaySemiBold,
-                        fontSize: 12,
+                        fontSize: fontSizes.caption,
                       }}
                     >
                       +{challenge.rewardXp.toLocaleString()} XP

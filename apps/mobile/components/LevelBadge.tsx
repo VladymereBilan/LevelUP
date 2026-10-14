@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 import Svg, { Defs, G, LinearGradient, Polygon, Stop } from "react-native-svg";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 interface LevelBadgeProps {
   level: number;
@@ -47,7 +47,12 @@ export function LevelBadge({ level, width = 86, height = 96 }: LevelBadgeProps) 
       </Svg>
       <View className="absolute inset-0 items-center justify-center">
         <Text
-          style={{ color: colors.violetLight, fontSize: 8, fontWeight: "700", letterSpacing: 1.2 }}
+          style={{
+            color: colors.violetLight,
+            fontSize: fontSizes.label,
+            fontWeight: "700",
+            letterSpacing: 1.2,
+          }}
         >
           LEVEL
         </Text>

@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 import { Icon } from "./Icon";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 interface StreakChipProps {
   days: number;
@@ -18,10 +18,16 @@ export function StreakChip({ days }: StreakChipProps) {
       }}
     >
       <Icon name="flame" size={16} color={colors.warning} />
-      <Text style={{ color: colors.warning, fontFamily: fonts.displaySemiBold, fontSize: 12 }}>
+      <Text
+        style={{
+          color: colors.warning,
+          fontFamily: fonts.displaySemiBold,
+          fontSize: fontSizes.caption,
+        }}
+      >
         {days}
       </Text>
-      <Text style={{ color: "#B88735", fontSize: 7, fontWeight: "700" }}>DAYS</Text>
+      <Text style={{ color: "#B88735", fontSize: fontSizes.label, fontWeight: "700" }}>DAYS</Text>
     </View>
   );
 }

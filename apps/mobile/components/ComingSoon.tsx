@@ -1,7 +1,7 @@
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text, View } from "react-native";
 import { Icon, type IconName } from "./Icon";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 interface ComingSoonProps {
   icon: IconName;
@@ -33,7 +33,7 @@ export function ComingSoon({ icon, title, copy }: ComingSoonProps) {
         <Text
           style={{
             color: colors.muted,
-            fontSize: 12,
+            fontSize: fontSizes.caption,
             lineHeight: 18,
             textAlign: "center",
             maxWidth: 260,

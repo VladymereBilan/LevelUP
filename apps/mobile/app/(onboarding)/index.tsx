@@ -12,7 +12,7 @@ import {
   type StarterTemplateId,
 } from "../../lib/onboarding";
 import { useOnboarding } from "../../lib/OnboardingProvider";
-import { colors, fonts } from "../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../theme/tokens";
 
 const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
 
@@ -68,13 +68,20 @@ export default function OnboardingScreen() {
       >
         <View style={{ alignItems: "center", gap: 8, marginTop: 12 }}>
           <Logo compact />
-          <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.body, textAlign: "center" }}>
             Let&apos;s set up your journey.
           </Text>
         </View>
 
         <View style={{ gap: 10 }}>
-          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.4 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.4,
+            }}
+          >
             WHAT SHOULD WE CALL YOU, HUNTER?
           </Text>
           <TextInput
@@ -93,16 +100,23 @@ export default function OnboardingScreen() {
               backgroundColor: "rgba(18,18,31,0.75)",
               color: colors.text,
               paddingHorizontal: 16,
-              fontSize: 15,
+              fontSize: fontSizes.bodyLarge,
             }}
           />
-          <Text style={{ color: colors.disabled, fontSize: 9 }}>
+          <Text style={{ color: colors.disabled, fontSize: fontSizes.label }}>
             3-20 characters: letters, numbers, or underscores.
           </Text>
         </View>
 
         <View style={{ gap: 10 }}>
-          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.4 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.4,
+            }}
+          >
             CHOOSE YOUR PATH
           </Text>
           <View style={{ gap: 10 }}>
@@ -141,12 +155,12 @@ export default function OnboardingScreen() {
                       style={{
                         color: colors.text,
                         fontFamily: fonts.displaySemiBold,
-                        fontSize: 13,
+                        fontSize: fontSizes.body,
                       }}
                     >
                       {option.name}
                     </Text>
-                    <Text style={{ color: colors.muted, fontSize: 10, marginTop: 3 }}>
+                    <Text style={{ color: colors.muted, fontSize: fontSizes.label, marginTop: 3 }}>
                       {option.description}
                     </Text>
                   </View>
@@ -179,7 +193,9 @@ export default function OnboardingScreen() {
         </View>
 
         {error ? (
-          <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>{error}</Text>
+          <Text style={{ color: colors.danger, fontSize: fontSizes.caption, textAlign: "center" }}>
+            {error}
+          </Text>
         ) : null}
 
         <Button onPress={() => void handleBegin()} disabled={!canSubmit} loading={submitting}>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { deleteAccount, DELETE_ACCOUNT_CONFIRMATION_PHRASE } from "../lib/account";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 import { BottomSheet } from "./BottomSheet";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
@@ -58,17 +58,37 @@ export function DeleteAccountSheet({ visible, onClose }: DeleteAccountSheetProps
           >
             <Icon name="warning" size={22} color={colors.danger} />
           </View>
-          <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 17 }}>
+          <Text
+            style={{
+              color: colors.text,
+              fontFamily: fonts.displaySemiBold,
+              fontSize: fontSizes.heading,
+            }}
+          >
             Delete your account?
           </Text>
-          <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center", lineHeight: 18 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.caption,
+              textAlign: "center",
+              lineHeight: 18,
+            }}
+          >
             This permanently deletes your account and everything in it — level, XP, stats, streaks,
             categories, activities, quests, and titles. This cannot be undone.
           </Text>
         </View>
 
         <View style={{ gap: 8 }}>
-          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.2 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.2,
+            }}
+          >
             TYPE {DELETE_ACCOUNT_CONFIRMATION_PHRASE} TO CONFIRM
           </Text>
           <TextInput
@@ -87,13 +107,15 @@ export function DeleteAccountSheet({ visible, onClose }: DeleteAccountSheetProps
               backgroundColor: "rgba(18,18,31,0.75)",
               color: colors.text,
               paddingHorizontal: 16,
-              fontSize: 15,
+              fontSize: fontSizes.bodyLarge,
             }}
           />
         </View>
 
         {error ? (
-          <Text style={{ color: colors.danger, fontSize: 12, textAlign: "center" }}>{error}</Text>
+          <Text style={{ color: colors.danger, fontSize: fontSizes.caption, textAlign: "center" }}>
+            {error}
+          </Text>
         ) : null}
 
         <Button

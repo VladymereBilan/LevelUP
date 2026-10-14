@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 import type { Stat } from "@levelup/engine";
 import { Icon, type IconName } from "./Icon";
-import { colors, fonts, statLabels, statTones, toneColors } from "../theme/tokens";
+import { colors, fontSizes, fonts, statLabels, statTones, toneColors } from "../theme/tokens";
 
 interface StatBarProps {
   stat: Stat;
@@ -40,13 +40,21 @@ export function StatBar({ stat, value }: StatBarProps) {
               width: 34,
               color: colors.text,
               fontFamily: fonts.displaySemiBold,
-              fontSize: 10,
+              fontSize: fontSizes.label,
             }}
           >
             {stat === "FOCUS" ? "FOC" : stat}
           </Text>
-          <Text style={{ flex: 1, color: colors.muted, fontSize: 9 }}>{statLabels[stat]}</Text>
-          <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 10 }}>
+          <Text style={{ flex: 1, color: colors.muted, fontSize: fontSizes.label }}>
+            {statLabels[stat]}
+          </Text>
+          <Text
+            style={{
+              color: colors.text,
+              fontFamily: fonts.displaySemiBold,
+              fontSize: fontSizes.body,
+            }}
+          >
             {value}
           </Text>
         </View>

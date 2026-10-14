@@ -7,7 +7,7 @@ import {
 } from "@levelup/engine";
 import { BottomSheet } from "./BottomSheet";
 import { Button } from "./Button";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 /** Player-facing names for the three tracking sources. "manual"/"health" are engine vocabulary;
  * nobody outside the codebase should have to learn them. */
@@ -29,12 +29,14 @@ const SOURCES_BY_VALUE: readonly QuestSource[] = ["manual", "timer", "health"];
 function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-      <Text style={{ color: muted ? colors.muted : colors.text, fontSize: 13 }}>{label}</Text>
+      <Text style={{ color: muted ? colors.muted : colors.text, fontSize: fontSizes.body }}>
+        {label}
+      </Text>
       <Text
         style={{
           color: muted ? colors.muted : colors.text,
           fontFamily: fonts.bodySemiBold,
-          fontSize: 13,
+          fontSize: fontSizes.body,
         }}
       >
         {value}
@@ -75,7 +77,14 @@ export function XpBreakdownSheet({ visible, onClose, breakdown }: XpBreakdownShe
     <BottomSheet visible={visible} onClose={onClose}>
       <View style={{ gap: 18, paddingBottom: 8 }}>
         <View style={{ alignItems: "center", gap: 2 }}>
-          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.4 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.4,
+            }}
+          >
             THIS QUEST IS WORTH
           </Text>
           <Text style={{ color: colors.violetLight, fontFamily: fonts.displayBold, fontSize: 34 }}>
@@ -107,7 +116,14 @@ export function XpBreakdownSheet({ visible, onClose, breakdown }: XpBreakdownShe
         <View style={{ height: 1, backgroundColor: colors.border }} />
 
         <View style={{ gap: 9 }}>
-          <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.2 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.2,
+            }}
+          >
             HOW YOU TRACK IT CHANGES THE XP
           </Text>
           {alternatives.map(({ source, total }) => {
@@ -131,7 +147,7 @@ export function XpBreakdownSheet({ visible, onClose, breakdown }: XpBreakdownShe
                   style={{
                     color: isCurrent ? colors.text : colors.muted,
                     fontFamily: isCurrent ? fonts.bodySemiBold : fonts.body,
-                    fontSize: 13,
+                    fontSize: fontSizes.body,
                   }}
                 >
                   {SOURCE_LABELS[source]}
@@ -141,7 +157,7 @@ export function XpBreakdownSheet({ visible, onClose, breakdown }: XpBreakdownShe
                   style={{
                     color: isCurrent ? colors.violetLight : colors.muted,
                     fontFamily: fonts.bodySemiBold,
-                    fontSize: 13,
+                    fontSize: fontSizes.body,
                   }}
                 >
                   {total} XP
@@ -149,7 +165,7 @@ export function XpBreakdownSheet({ visible, onClose, breakdown }: XpBreakdownShe
               </View>
             );
           })}
-          <Text style={{ color: colors.disabled, fontSize: 10, lineHeight: 15 }}>
+          <Text style={{ color: colors.disabled, fontSize: fontSizes.label, lineHeight: 15 }}>
             Timed quests use the built-in timer. Runs track by GPS, and steps can sync from Health
             Connect — both count as auto-tracked.
           </Text>

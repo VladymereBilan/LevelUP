@@ -39,6 +39,37 @@ export const fonts = {
   displayBold: "SpaceGrotesk_700Bold",
 } as const;
 
+/**
+ * The type scale. Named `fontSizes` rather than `type` because
+ * `import { type }` collides with TypeScript's type-only import modifier.
+ *
+ * Nothing should sit below `label` (11): the app had 52 pieces
+ * of text at 7-9px, which is roughly half the smallest size either platform's
+ * own guidelines consider legible — hard to read at arm's length, and harder
+ * still for anyone who needs reading glasses or is outdoors.
+ *
+ * These are raw pixel sizes and do NOT scale with the system font setting.
+ * Honouring that setting means letting text reflow, which several fixed-height
+ * cards here can't yet do — a real fix, but a layout change rather than a
+ * number change.
+ */
+export const fontSizes = {
+  /** Uppercase, tracked micro-labels — section headers, stat captions. */
+  label: 11,
+  /** Secondary and supporting copy. */
+  caption: 12,
+  /** Default body text. */
+  body: 13,
+  /** Emphasised body, list titles. */
+  bodyLarge: 15,
+  /** Card and section headings. */
+  heading: 17,
+  /** Screen titles. */
+  title: 22,
+  /** Numerals meant to be read across the room — level, XP totals. */
+  display: 28,
+} as const;
+
 export type StatTone = "red" | "blue" | "green" | "violet" | "amber";
 
 export const statTones: Record<Stat, StatTone> = {

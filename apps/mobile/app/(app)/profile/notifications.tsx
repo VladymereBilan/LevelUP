@@ -12,7 +12,7 @@ import {
   setNotificationPrefs,
   type NotificationPrefs,
 } from "../../../lib/notifications";
-import { colors, fonts } from "../../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../../theme/tokens";
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -55,7 +55,13 @@ export default function NotificationsScreen() {
         >
           <Icon name="arrow" size={16} color={colors.muted} />
         </Pressable>
-        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+        <Text
+          style={{
+            color: colors.text,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: fontSizes.bodyLarge,
+          }}
+        >
           Notifications
         </Text>
       </View>
@@ -71,7 +77,9 @@ export default function NotificationsScreen() {
             />
             {prefs.dailyReminderEnabled ? (
               <View style={{ gap: 8 }}>
-                <Text style={{ color: colors.muted, fontSize: 10 }}>Reminder time</Text>
+                <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+                  Reminder time
+                </Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <Stepper
                     value={prefs.dailyReminderHour}
@@ -101,7 +109,7 @@ export default function NotificationsScreen() {
             />
           </SettingsCard>
         ) : (
-          <Text style={{ color: colors.muted, fontSize: 12 }}>Loading...</Text>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.caption }}>Loading...</Text>
         )}
       </ScrollView>
     </SafeAreaView>

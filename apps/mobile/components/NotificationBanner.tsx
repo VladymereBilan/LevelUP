@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 import { Icon, type IconName } from "./Icon";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 interface NotificationBannerProps {
   icon: IconName;
@@ -33,7 +33,13 @@ export function NotificationBanner({
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <View className="flex-row items-center justify-between">
-          <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>
+          <Text
+            style={{
+              color: colors.text,
+              fontFamily: fonts.bodySemiBold,
+              fontSize: fontSizes.caption,
+            }}
+          >
             {title}
           </Text>
           {unread ? (
@@ -43,8 +49,10 @@ export function NotificationBanner({
             />
           ) : null}
         </View>
-        <Text style={{ color: colors.muted, fontSize: 10, lineHeight: 15 }}>{message}</Text>
-        <Text style={{ color: colors.disabled, fontSize: 9 }}>{timestamp}</Text>
+        <Text style={{ color: colors.muted, fontSize: fontSizes.label, lineHeight: 15 }}>
+          {message}
+        </Text>
+        <Text style={{ color: colors.disabled, fontSize: fontSizes.label }}>{timestamp}</Text>
       </View>
     </View>
   );

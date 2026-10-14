@@ -11,7 +11,7 @@ import { listMyCategories, type CategoryRow } from "../../../../lib/categories";
 import { invalidateBootstrapCache } from "../../../../lib/bootstrap";
 import { getMyStreak } from "../../../../lib/streaks";
 import { useFocusLoad } from "../../../../lib/useFocusLoad";
-import { colors, fonts } from "../../../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../../../theme/tokens";
 
 export default function EditActivityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -89,7 +89,13 @@ export default function EditActivityScreen() {
         >
           <Icon name="arrow" size={16} color={colors.muted} />
         </Pressable>
-        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+        <Text
+          style={{
+            color: colors.text,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: fontSizes.bodyLarge,
+          }}
+        >
           Edit Activity
         </Text>
       </View>

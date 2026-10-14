@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 import Svg, { Polygon } from "react-native-svg";
 import type { Rank } from "@levelup/engine";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 interface RankChipProps {
   rank: Rank;
@@ -30,7 +30,13 @@ export function RankChip({ rank, width = 26, height = 21 }: RankChipProps) {
         <Polygon points={hexPoints(width, height)} fill="rgba(59,130,246,0.16)" />
       </Svg>
       <View className="absolute inset-0 items-center justify-center">
-        <Text style={{ color: colors.blueLight, fontFamily: fonts.displaySemiBold, fontSize: 11 }}>
+        <Text
+          style={{
+            color: colors.blueLight,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: fontSizes.label,
+          }}
+        >
           {rank}
         </Text>
       </View>

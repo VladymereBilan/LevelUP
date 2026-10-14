@@ -28,7 +28,7 @@ import {
   getCategoryIcon,
   questSourceForMetric,
 } from "../lib/questFormat";
-import { colors, fonts, statLabels } from "../theme/tokens";
+import { colors, fontSizes, fonts, statLabels } from "../theme/tokens";
 
 const METRIC_OPTIONS: { value: MetricType; label: string }[] = [
   { value: "checkbox", label: "Checkbox" },
@@ -152,7 +152,14 @@ function summarizeTarget(target: ActivityTarget): string {
 
 function label(text: string) {
   return (
-    <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "700", letterSpacing: 1.2 }}>
+    <Text
+      style={{
+        color: colors.muted,
+        fontSize: fontSizes.label,
+        fontWeight: "700",
+        letterSpacing: 1.2,
+      }}
+    >
       {text}
     </Text>
   );
@@ -160,7 +167,7 @@ function label(text: string) {
 
 function fieldError(text: string | null) {
   if (!text) return null;
-  return <Text style={{ color: colors.danger, fontSize: 11 }}>{text}</Text>;
+  return <Text style={{ color: colors.danger, fontSize: fontSizes.label }}>{text}</Text>;
 }
 
 export function ActivityForm({
@@ -422,7 +429,7 @@ export function ActivityForm({
           <View style={{ gap: 10 }}>
             {label("TARGET")}
             {target.type === "checkbox" ? (
-              <Text style={{ color: colors.muted, fontSize: 12 }}>
+              <Text style={{ color: colors.muted, fontSize: fontSizes.caption }}>
                 Just mark it done — no target.
               </Text>
             ) : target.type === "minutes" ? (
@@ -462,7 +469,7 @@ export function ActivityForm({
             ) : (
               <View style={{ gap: 16 }}>
                 <View style={{ gap: 6 }}>
-                  <Text style={{ color: colors.muted, fontSize: 10 }}>Sets</Text>
+                  <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>Sets</Text>
                   <Stepper
                     value={target.sets}
                     min={1}
@@ -471,7 +478,9 @@ export function ActivityForm({
                   />
                 </View>
                 <View style={{ gap: 6 }}>
-                  <Text style={{ color: colors.muted, fontSize: 10 }}>Reps per set</Text>
+                  <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+                    Reps per set
+                  </Text>
                   <Stepper
                     value={target.reps}
                     min={1}
@@ -480,7 +489,9 @@ export function ActivityForm({
                   />
                 </View>
                 <View style={{ gap: 6 }}>
-                  <Text style={{ color: colors.muted, fontSize: 10 }}>Weight (kg, optional)</Text>
+                  <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+                    Weight (kg, optional)
+                  </Text>
                   <Stepper
                     value={target.weightKg ?? 0}
                     min={0}
@@ -528,9 +539,11 @@ export function ActivityForm({
             ) : null}
             {scheduleKind === "one_off" ? (
               <View style={{ gap: 6 }}>
-                <Text style={{ color: colors.muted, fontSize: 10 }}>Days from today</Text>
+                <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+                  Days from today
+                </Text>
                 <Stepper value={oneOffOffset} min={0} max={365} onChange={setOneOffOffset} />
-                <Text style={{ color: colors.muted, fontSize: 11 }}>
+                <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
                   {offsetFromToday(oneOffOffset)}
                 </Text>
               </View>
@@ -551,7 +564,11 @@ export function ActivityForm({
               ))}
             </View>
             <Text
-              style={{ color: colors.violetLight, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+              style={{
+                color: colors.violetLight,
+                fontFamily: fonts.displaySemiBold,
+                fontSize: fontSizes.body,
+              }}
             >
               +{xpPreview} XP per completion
             </Text>
@@ -576,18 +593,26 @@ export function ActivityForm({
         >
           <View style={{ flex: 1, gap: 3 }}>
             {label("SET UP AS")}
-            <Text style={{ color: colors.text, fontSize: 13 }}>{defaultsSummary}</Text>
-            <Text style={{ color: colors.violetLight, fontSize: 11, marginTop: 2 }}>
+            <Text style={{ color: colors.text, fontSize: fontSizes.body }}>{defaultsSummary}</Text>
+            <Text style={{ color: colors.violetLight, fontSize: fontSizes.label, marginTop: 2 }}>
               +{xpPreview} XP per completion
             </Text>
           </View>
-          <Text style={{ color: colors.violetLight, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>
+          <Text
+            style={{
+              color: colors.violetLight,
+              fontFamily: fonts.bodySemiBold,
+              fontSize: fontSizes.caption,
+            }}
+          >
             Change
           </Text>
         </Pressable>
       )}
 
-      {error ? <Text style={{ color: colors.danger, fontSize: 12 }}>{error}</Text> : null}
+      {error ? (
+        <Text style={{ color: colors.danger, fontSize: fontSizes.caption }}>{error}</Text>
+      ) : null}
 
       <Button icon="check" onPress={handleSubmit} disabled={!canSubmit} loading={submitting}>
         {submitLabel}

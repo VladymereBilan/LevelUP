@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { colors, fonts, gradient } from "../theme/tokens";
+import { colors, fontSizes, fonts, gradient } from "../theme/tokens";
 
 export interface BarChartDatum {
   label: string;
@@ -28,7 +28,7 @@ export function BarChart({ data, highlightIndex }: BarChartProps) {
         const highlighted = index === highlightIndex;
         return (
           <View key={`${datum.label}-${index}`} style={{ flex: 1, alignItems: "center", gap: 6 }}>
-            <Text style={{ color: colors.muted, fontSize: 8 }}>{datum.value}</Text>
+            <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>{datum.value}</Text>
             <View
               style={{
                 width: "100%",
@@ -59,7 +59,13 @@ export function BarChart({ data, highlightIndex }: BarChartProps) {
                 />
               )}
             </View>
-            <Text style={{ color: colors.muted, fontSize: 9, fontFamily: fonts.bodyMedium }}>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: fontSizes.label,
+                fontFamily: fonts.bodyMedium,
+              }}
+            >
               {datum.label}
             </Text>
           </View>

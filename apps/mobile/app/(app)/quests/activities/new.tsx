@@ -11,7 +11,7 @@ import { createCategory, listMyCategories, type CategoryRow } from "../../../../
 import { invalidateBootstrapCache } from "../../../../lib/bootstrap";
 import { getMyStreak } from "../../../../lib/streaks";
 import { useFocusLoad } from "../../../../lib/useFocusLoad";
-import { colors, fonts } from "../../../../theme/tokens";
+import { colors, fontSizes, fonts } from "../../../../theme/tokens";
 
 export default function NewActivityScreen() {
   const { session } = useSession();
@@ -81,7 +81,13 @@ export default function NewActivityScreen() {
         >
           <Icon name="arrow" size={16} color={colors.muted} />
         </Pressable>
-        <Text style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 15 }}>
+        <Text
+          style={{
+            color: colors.text,
+            fontFamily: fonts.displaySemiBold,
+            fontSize: fontSizes.bodyLarge,
+          }}
+        >
           Add Activity
         </Text>
       </View>

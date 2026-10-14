@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from "react-native";
 import { Icon, type IconName } from "./Icon";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 interface ChipProps {
   label: string;
@@ -37,7 +37,7 @@ export function Chip({ label, selected, onPress, icon, tint = colors.violet }: C
         style={{
           color: selected ? colors.text : colors.muted,
           fontFamily: selected ? fonts.bodySemiBold : fonts.body,
-          fontSize: 12,
+          fontSize: fontSizes.caption,
         }}
       >
         {label}

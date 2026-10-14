@@ -13,7 +13,7 @@ import { LevelBadge } from "./LevelBadge";
 import { RankChip } from "./RankChip";
 import type { QuestCompleteResult } from "../lib/quests";
 import { questCompleted } from "../lib/haptics";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 interface QuestCompleteModalProps {
   visible: boolean;
@@ -103,14 +103,20 @@ export function QuestCompleteModal({
             <Text
               style={{
                 color: colors.violetLight,
-                fontSize: 10,
+                fontSize: fontSizes.label,
                 fontWeight: "700",
                 letterSpacing: 2,
               }}
             >
               QUEST COMPLETE
             </Text>
-            <Text style={{ color: colors.text, fontFamily: fonts.displayBold, fontSize: 28 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontFamily: fonts.displayBold,
+                fontSize: fontSizes.display,
+              }}
+            >
               {result.leveledUp ? "LEVEL UP" : "Nice work."}
             </Text>
           </View>
@@ -157,7 +163,9 @@ export function QuestCompleteModal({
           {result.rankedUp ? (
             <View style={{ marginTop: 22, flexDirection: "row", alignItems: "center", gap: 8 }}>
               <RankChip rank={result.rank} />
-              <Text style={{ color: colors.muted, fontSize: 11 }}>New rank unlocked!</Text>
+              <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+                New rank unlocked!
+              </Text>
             </View>
           ) : null}
 
@@ -179,7 +187,7 @@ export function QuestCompleteModal({
                 <Text
                   style={{
                     color: colors.violetLight,
-                    fontSize: 9,
+                    fontSize: fontSizes.label,
                     fontWeight: "700",
                     letterSpacing: 1,
                   }}
@@ -190,12 +198,16 @@ export function QuestCompleteModal({
               {result.titlesUnlocked.map((title) => (
                 <View key={title.id}>
                   <Text
-                    style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+                    style={{
+                      color: colors.text,
+                      fontFamily: fonts.displaySemiBold,
+                      fontSize: fontSizes.body,
+                    }}
                   >
                     {title.name}
                   </Text>
                   {title.description ? (
-                    <Text style={{ color: colors.muted, fontSize: 10, marginTop: 1 }}>
+                    <Text style={{ color: colors.muted, fontSize: fontSizes.label, marginTop: 1 }}>
                       {title.description}
                     </Text>
                   ) : null}
@@ -205,12 +217,12 @@ export function QuestCompleteModal({
           ) : null}
 
           {result.title ? (
-            <Text style={{ marginTop: 16, color: colors.muted, fontSize: 11 }}>
+            <Text style={{ marginTop: 16, color: colors.muted, fontSize: fontSizes.label }}>
               Equipped title: <Text style={{ color: colors.text }}>{result.title}</Text>
             </Text>
           ) : null}
 
-          <Text style={{ marginTop: 16, color: colors.muted, fontSize: 11 }}>
+          <Text style={{ marginTop: 16, color: colors.muted, fontSize: fontSizes.label }}>
             Streak: {result.streak.current} day{result.streak.current === 1 ? "" : "s"}
           </Text>
 
@@ -230,12 +242,16 @@ export function QuestCompleteModal({
               <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
                 <Icon name="bell" size={14} color={colors.blueLight} />
                 <Text
-                  style={{ color: colors.text, fontFamily: fonts.displaySemiBold, fontSize: 13 }}
+                  style={{
+                    color: colors.text,
+                    fontFamily: fonts.displaySemiBold,
+                    fontSize: fontSizes.body,
+                  }}
                 >
                   Keep this streak going?
                 </Text>
               </View>
-              <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>
+              <Text style={{ color: colors.muted, fontSize: fontSizes.label, lineHeight: 16 }}>
                 A daily nudge, plus a heads-up when your streak is about to break. You can change
                 this any time in Profile.
               </Text>

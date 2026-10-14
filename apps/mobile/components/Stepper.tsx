@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from "react-native";
 import { Icon } from "./Icon";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 interface StepperProps {
   value: number;
@@ -45,7 +45,9 @@ export function Stepper({ value, onChange, min, max, step = 1, suffix }: Stepper
         }}
       >
         {value}
-        {suffix ? <Text style={{ color: colors.muted, fontSize: 11 }}> {suffix}</Text> : null}
+        {suffix ? (
+          <Text style={{ color: colors.muted, fontSize: fontSizes.label }}> {suffix}</Text>
+        ) : null}
       </Text>
       <Pressable
         onPress={() => onChange(Math.min(max, value + step))}

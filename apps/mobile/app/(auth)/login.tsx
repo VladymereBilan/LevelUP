@@ -6,7 +6,7 @@ import { Icon } from "../../components/Icon";
 import { Logo } from "../../components/Logo";
 import { Button } from "../../components/Button";
 import { signInWithGoogle } from "../../lib/auth";
-import { colors } from "../../theme/tokens";
+import { colors, fontSizes } from "../../theme/tokens";
 
 // Both pages live in apps/web, the same origin the API routes are served from.
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -71,7 +71,12 @@ export default function LoginScreen() {
               style={{ width: 38, height: 1, backgroundColor: colors.disabled, opacity: 0.4 }}
             />
             <Text
-              style={{ color: colors.disabled, fontSize: 8, fontWeight: "700", letterSpacing: 2.5 }}
+              style={{
+                color: colors.disabled,
+                fontSize: fontSizes.label,
+                fontWeight: "700",
+                letterSpacing: 2.5,
+              }}
             >
               BEGIN YOUR JOURNEY
             </Text>
@@ -87,7 +92,12 @@ export default function LoginScreen() {
           </Button>
           {error ? (
             <Text
-              style={{ marginTop: 10, color: colors.danger, fontSize: 12, textAlign: "center" }}
+              style={{
+                marginTop: 10,
+                color: colors.danger,
+                fontSize: fontSizes.caption,
+                textAlign: "center",
+              }}
             >
               {error}
             </Text>
@@ -96,7 +106,7 @@ export default function LoginScreen() {
             style={{
               marginTop: 16,
               color: colors.disabled,
-              fontSize: 9,
+              fontSize: fontSizes.label,
               lineHeight: 14,
               textAlign: "center",
             }}

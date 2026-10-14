@@ -2,7 +2,7 @@ import { Modal, Pressable, Text, View } from "react-native";
 import { Icon } from "./Icon";
 import { Button } from "./Button";
 import { describeTitleUnlockRule, titleIcon, type TitleDisplay } from "../lib/titles";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 interface TitleDetailModalProps {
   title: TitleDisplay | null;
@@ -69,7 +69,7 @@ export function TitleDetailModal({
             style={{
               color: colors.text,
               fontFamily: fonts.displaySemiBold,
-              fontSize: 17,
+              fontSize: fontSizes.heading,
               textAlign: "center",
             }}
           >
@@ -77,7 +77,7 @@ export function TitleDetailModal({
           </Text>
 
           {title.description ? (
-            <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center" }}>
+            <Text style={{ color: colors.muted, fontSize: fontSizes.caption, textAlign: "center" }}>
               {title.description}
             </Text>
           ) : null}
@@ -85,7 +85,7 @@ export function TitleDetailModal({
           <Text
             style={{
               color: title.unlocked ? colors.success : colors.disabled,
-              fontSize: 10,
+              fontSize: fontSizes.label,
               fontWeight: "700",
               letterSpacing: 1,
               marginTop: 2,
@@ -94,11 +94,13 @@ export function TitleDetailModal({
             {title.unlocked ? "UNLOCKED" : "LOCKED"}
           </Text>
           {!title.unlocked ? (
-            <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center" }}>
+            <Text style={{ color: colors.muted, fontSize: fontSizes.label, textAlign: "center" }}>
               {describeTitleUnlockRule(title.unlockRule)}
             </Text>
           ) : isEquipped ? (
-            <Text style={{ color: colors.violetLight, fontSize: 11, textAlign: "center" }}>
+            <Text
+              style={{ color: colors.violetLight, fontSize: fontSizes.label, textAlign: "center" }}
+            >
               Currently equipped
             </Text>
           ) : null}

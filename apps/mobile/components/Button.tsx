@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon, type IconName } from "./Icon";
-import { colors, fonts, gradient } from "../theme/tokens";
+import { colors, fontSizes, fonts, gradient } from "../theme/tokens";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "google" | "danger";
 
@@ -48,7 +48,7 @@ export function Button({
           {icon ? (
             <Icon name={icon} size={18} color={variant === "google" ? "#4285F4" : textColor} />
           ) : null}
-          <Text style={{ color: textColor, fontFamily: fonts.bodyBold, fontSize: 13 }}>
+          <Text style={{ color: textColor, fontFamily: fonts.bodyBold, fontSize: fontSizes.body }}>
             {children}
           </Text>
           {variant === "primary" ? <Icon name="arrow" size={17} color={textColor} /> : null}
@@ -67,12 +67,19 @@ export function Button({
       style={{ opacity: isDisabled ? 0.6 : 1, width: "100%" }}
     >
       {variant === "primary" ? (
-        <LinearGradient
-          colors={gradient.colors}
-          start={gradient.start}
-          end={gradient.end}
+        // The glow lives on this wrapper, not on the gradient itself. Android
+        // ignores shadow* and draws `elevation` from the view's own background;
+        // a LinearGradient paints its gradient as a child drawable, so the
+        // elevation shadow was being rendered against an undefined background
+        // and showed up as a lighter rounded rectangle inset inside the button.
+        // A plain View with a solid backgroundColor gives Android something real
+        // to cast from, and `overflow: hidden` keeps the gradient inside the
+        // radius.
+        <View
           style={{
             borderRadius: 16,
+            backgroundColor: colors.violet,
+            overflow: "hidden",
             shadowColor: colors.violet,
             shadowOpacity: 0.27,
             shadowRadius: 20,
@@ -80,8 +87,10 @@ export function Button({
             elevation: 6,
           }}
         >
-          {content}
-        </LinearGradient>
+          <LinearGradient colors={gradient.colors} start={gradient.start} end={gradient.end}>
+            {content}
+          </LinearGradient>
+        </View>
       ) : variant === "secondary" ? (
         <View
           style={{
@@ -98,6 +107,7 @@ export function Button({
           style={{
             borderRadius: 16,
             backgroundColor: colors.text,
+            overflow: "hidden",
             shadowColor: "#000",
             shadowOpacity: 0.3,
             shadowRadius: 20,
