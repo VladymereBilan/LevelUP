@@ -11,6 +11,23 @@ function bearerToken(request: Request): string | undefined {
 }
 
 /**
+ * One client per warm function instance rather than one per request, because
+ * `getClaims` caches the project's JWKS on the client it's called from: a fresh
+ * client each time would refetch the key set on every request, which trades the
+ * `getUser` round trip for a different one instead of removing it.
+ *
+ * Safe to share. It holds no per-user state — no persisted session, no auto-refresh
+ * (see createServiceRoleClient) — and every call here passes its token explicitly
+ * instead of reading an ambient one.
+ */
+let sharedClient: SupabaseClient<Database> | undefined;
+
+function serviceRoleClient(): SupabaseClient<Database> {
+  sharedClient ??= createServiceRoleClient();
+  return sharedClient;
+}
+
+/**
  * Verifies the caller's Supabase access token from the Authorization
  * header and returns a service-role client plus their user id. The
  * service-role client is what makes `complete_quest`/`generate_daily_quests`
@@ -40,7 +57,7 @@ export async function authenticate(request: Request): Promise<AuthenticatedReque
     return Response.json({ error: "Missing bearer token" }, { status: 401 });
   }
 
-  const supabase = createServiceRoleClient();
+  const supabase = serviceRoleClient();
   const { data, error } = await supabase.auth.getClaims(token);
 
   // `role` guards against a token that verifies but doesn't represent a signed-in end
@@ -71,7 +88,7 @@ export async function authenticateFresh(
     return Response.json({ error: "Missing bearer token" }, { status: 401 });
   }
 
-  const supabase = createServiceRoleClient();
+  const supabase = serviceRoleClient();
   const { data, error } = await supabase.auth.getUser(token);
 
   if (error || !data.user) {
