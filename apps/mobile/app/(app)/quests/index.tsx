@@ -7,20 +7,14 @@ import { Button } from "../../../components/Button";
 import { Icon } from "../../../components/Icon";
 import { QuestCard } from "../../../components/QuestCard";
 import { ApiError } from "../../../lib/api";
-import { countMyActivities } from "../../../lib/activities";
 import { useSession } from "../../../lib/AuthProvider";
+import { invalidateBootstrapCache, loadBootstrap } from "../../../lib/bootstrap";
 import {
   STARTER_TEMPLATE_OPTIONS,
   seedStarterTemplate,
   type StarterTemplateId,
 } from "../../../lib/onboarding";
-import {
-  invalidateQuestBoardCache,
-  loadTodaysQuestBoard,
-  type QuestBoardItem,
-} from "../../../lib/questBoard";
-import { generateQuests } from "../../../lib/quests";
-import { getMyStreak } from "../../../lib/streaks";
+import { type QuestBoardItem } from "../../../lib/questBoard";
 import {
   formatProgressLabel,
   getCategoryIcon,
@@ -68,12 +62,8 @@ export default function QuestsScreen() {
       setError(null);
 
       try {
-        const [board, streak, activityCount] = await Promise.all([
-          loadTodaysQuestBoard(),
-          getMyStreak(session.user.id),
-          countMyActivities(session.user.id),
-        ]);
-        setGroups(groupByCategory(board.items));
+        const { quests, streak, activityCount } = await loadBootstrap();
+        setGroups(groupByCategory(quests));
         setStreakDays(streak.current);
         setHasAnyActivities(activityCount > 0);
       } catch (err) {
@@ -90,8 +80,9 @@ export default function QuestsScreen() {
     setError(null);
     try {
       await seedStarterTemplate(templateId);
-      invalidateQuestBoardCache();
-      await generateQuests().catch(() => {});
+      // The next load generates the new template's quests itself — /api/bootstrap
+      // runs generation before it reads.
+      invalidateBootstrapCache();
       await refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to set up that template.");

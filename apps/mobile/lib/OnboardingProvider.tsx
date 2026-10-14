@@ -34,10 +34,9 @@ async function bootstrapSession(): Promise<void> {
  * root layout reads `status` to decide between (app), (onboarding), and holding the
  * splash.
  *
- * Quest generation is deliberately NOT part of this: `loadTodaysQuestBoard()` is its
- * single caller now (Home and the Quests tab both go through it, and it de-dupes
- * concurrent calls), so opening the app hits /api/quests/generate once instead of
- * twice.
+ * Quest generation is deliberately NOT part of this: POST /api/bootstrap runs it
+ * server-side before reading, so opening the app generates exactly once, inside
+ * the one request that also fetches everything the first screen draws.
  */
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { session } = useSession();

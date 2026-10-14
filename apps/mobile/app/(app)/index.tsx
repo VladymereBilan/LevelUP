@@ -11,13 +11,12 @@ import { StatBar } from "../../components/StatBar";
 import { StreakChip } from "../../components/StreakChip";
 import { XpBar } from "../../components/XpBar";
 import { useSession } from "../../lib/AuthProvider";
+import { loadBootstrap } from "../../lib/bootstrap";
 import { bootMark } from "../../lib/bootTrace";
-import { getMyProfile, type ProfileSummary } from "../../lib/profile";
-import { getMyStats, type StatsRow } from "../../lib/stats";
-import { getMyStreak, type StreakRow } from "../../lib/streaks";
-import { loadTodaysQuestBoard } from "../../lib/questBoard";
+import type { ProfileSummary } from "../../lib/profile";
+import type { StatsRow } from "../../lib/stats";
+import type { StreakRow } from "../../lib/streaks";
 import { initials } from "../../lib/questFormat";
-import { listMyTitles } from "../../lib/titles";
 import { useFocusLoad } from "../../lib/useFocusLoad";
 import { colors, fonts } from "../../theme/tokens";
 
@@ -38,22 +37,15 @@ export default function HomeScreen() {
 
   const load = useCallback(async () => {
     if (!session) return;
-    const currentSession = session;
 
     try {
-      const profile = await getMyProfile(currentSession.user.id);
-      const [stats, streak, board, titles] = await Promise.all([
-        getMyStats(profile.id),
-        getMyStreak(profile.id),
-        loadTodaysQuestBoard(),
-        listMyTitles(profile.id),
-      ]);
+      const { profile, stats, streak, quests, titles } = await loadBootstrap();
       setData({
         profile,
         stats,
         streak,
-        questsCompleted: board.items.filter((item) => item.status === "completed").length,
-        questsTotal: board.items.length,
+        questsCompleted: quests.filter((quest) => quest.status === "completed").length,
+        questsTotal: quests.length,
         equippedTitleName: titles.find((title) => title.id === profile.title_id)?.name ?? null,
       });
       setError(null);

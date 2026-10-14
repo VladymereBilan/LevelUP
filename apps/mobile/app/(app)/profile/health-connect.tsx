@@ -12,11 +12,8 @@ import {
   requestHealthConnectPermissions,
   type HealthExerciseSession,
 } from "../../../lib/healthConnect";
-import {
-  invalidateQuestBoardCache,
-  loadTodaysQuestBoard,
-  type QuestBoardItem,
-} from "../../../lib/questBoard";
+import { invalidateBootstrapCache, loadBootstrap } from "../../../lib/bootstrap";
+import { type QuestBoardItem } from "../../../lib/questBoard";
 import { completeQuest } from "../../../lib/quests";
 import { colors, fonts } from "../../../theme/tokens";
 
@@ -39,9 +36,9 @@ export default function HealthConnectScreen() {
   }, []);
 
   async function loadEligibleQuests() {
-    const board = await loadTodaysQuestBoard();
+    const { quests } = await loadBootstrap();
     setEligibleQuests(
-      board.items.filter(
+      quests.filter(
         (item) =>
           item.status === "pending" &&
           (item.metricType === "steps" || item.metricType === "minutes"),
@@ -76,7 +73,7 @@ export default function HealthConnectScreen() {
     setError(null);
     try {
       await completeQuest(item.questId, { progress, source: "health" });
-      invalidateQuestBoardCache();
+      invalidateBootstrapCache();
       await loadEligibleQuests();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to sync quest.");

@@ -8,8 +8,7 @@ import { ApiError } from "../../../../lib/api";
 import { getActivity, updateActivity, type ActivityRow } from "../../../../lib/activities";
 import { useSession } from "../../../../lib/AuthProvider";
 import { listMyCategories, type CategoryRow } from "../../../../lib/categories";
-import { invalidateQuestBoardCache } from "../../../../lib/questBoard";
-import { generateQuests } from "../../../../lib/quests";
+import { invalidateBootstrapCache } from "../../../../lib/bootstrap";
 import { getMyStreak } from "../../../../lib/streaks";
 import { useFocusLoad } from "../../../../lib/useFocusLoad";
 import { colors, fonts } from "../../../../theme/tokens";
@@ -64,8 +63,7 @@ export default function EditActivityScreen() {
         difficulty: values.difficulty,
       });
 
-      invalidateQuestBoardCache();
-      await generateQuests().catch(() => {});
+      invalidateBootstrapCache();
       router.back();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save changes. Try again.");

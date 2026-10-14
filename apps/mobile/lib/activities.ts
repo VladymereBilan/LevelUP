@@ -35,18 +35,6 @@ export async function getActivity(activityId: string): Promise<ActivityRow | nul
   return data;
 }
 
-/** Total activities the user has ever created, archived or not — used to tell "never added
- * any activities yet" (show the template picker) apart from "added some, none due today". */
-export async function countMyActivities(userId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("activities")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  if (error) throw new Error(error.message);
-  return count ?? 0;
-}
-
 export interface CreateActivityInput {
   categoryId: string;
   name: string;

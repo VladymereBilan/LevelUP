@@ -15,16 +15,6 @@ export interface QuestRow {
   created_at: string;
 }
 
-export interface GenerateQuestsResult {
-  date: string;
-  quests: QuestRow[];
-}
-
-/** Idempotent — safe to call every time the app opens. */
-export function generateQuests(): Promise<GenerateQuestsResult> {
-  return apiFetch<GenerateQuestsResult>("/api/quests/generate");
-}
-
 export interface StreakSummary {
   current: number;
   longest: number;

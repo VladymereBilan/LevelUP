@@ -12,7 +12,7 @@ import {
 } from "../../../../lib/activities";
 import { useSession } from "../../../../lib/AuthProvider";
 import { listMyCategories, type CategoryRow } from "../../../../lib/categories";
-import { invalidateQuestBoardCache } from "../../../../lib/questBoard";
+import { invalidateBootstrapCache } from "../../../../lib/bootstrap";
 import { getCategoryIcon } from "../../../../lib/questFormat";
 import { useFocusLoad, type LoadMode } from "../../../../lib/useFocusLoad";
 import { colors, fonts } from "../../../../theme/tokens";
@@ -61,7 +61,7 @@ export default function ManageActivitiesScreen() {
     setPendingId(activity.id);
     try {
       await setActivityArchived(activity.id, !activity.archived);
-      invalidateQuestBoardCache();
+      invalidateBootstrapCache();
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update activity.");

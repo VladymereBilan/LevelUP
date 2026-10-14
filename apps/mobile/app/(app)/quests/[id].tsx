@@ -6,12 +6,8 @@ import { Icon } from "../../../components/Icon";
 import { Button } from "../../../components/Button";
 import { QuestCompleteModal } from "../../../components/QuestCompleteModal";
 import { ApiError } from "../../../lib/api";
-import {
-  invalidateQuestBoardCache,
-  loadQuestDetail,
-  updateQuestProgress,
-  type QuestBoardItem,
-} from "../../../lib/questBoard";
+import { invalidateBootstrapCache } from "../../../lib/bootstrap";
+import { loadQuestDetail, updateQuestProgress, type QuestBoardItem } from "../../../lib/questBoard";
 import { completeQuest, type QuestCompleteResult } from "../../../lib/quests";
 import { explainQuestXp, type QuestSource } from "@levelup/engine";
 import { XpBreakdownSheet } from "../../../components/XpBreakdownSheet";
@@ -240,7 +236,7 @@ export default function QuestDetailScreen() {
         progress: finalProgress,
         ...(source === "manual" ? {} : { source }),
       });
-      invalidateQuestBoardCache();
+      invalidateBootstrapCache();
       setCompleteResult(result);
       // Asked here rather than on launch or in Settings: they have just finished something and
       // can see the streak it started, which is the only moment the question answers itself.
