@@ -221,6 +221,34 @@ Google Play's data-deletion policy alongside `apps/web/app/delete-account`, a st
 (linked from `/privacy` and `/terms`) covering the same flow plus the email-request fallback
 for someone who can't sign back in.
 
+Shipped in v5 and v6 (2026-10-14/15), mostly performance and correctness:
+
+- **Cold start.** Opening the app took roughly a minute. Two causes, both since fixed. The
+  Vercel Functions ran in `iad1` while Supabase is in `ap-northeast-1`, so every route crossed
+  the Pacific three or four times sequentially — `apps/web/vercel.json` pins them to `hnd1`,
+  which took `/api/health` from a 981ms median to 252ms. And `OnboardingProvider` awaited two
+  Vercel calls before the first frame, each with a 15s timeout and a swallowed error, so two
+  stacked timeouts put 30s on screen before Home even mounted; the bootstrap is un-awaited now.
+  `lib/bootTrace.ts` (opt-in via `EXPO_PUBLIC_BOOT_TRACE=1`, see the `measure` EAS profile)
+  exists so the next change here is measured rather than argued.
+- **`POST /api/bootstrap`** replaced seven device round trips with one — see the
+  server-authoritative section above.
+- **Auth** verifies the caller's JWT in-process via `getClaims` instead of asking the Auth
+  server (`apps/web/lib/api/auth.ts`); `authenticateFresh` keeps the server check for account
+  deletion alone, the one irreversible route.
+- **XP source integrity** — see the server-authoritative section above. This closed a real
+  hole: a distance quest paid the top multiplier in the game for never moving.
+- **Legibility.** 78 pieces of text sat below 10px (41 at 9px). Everything is now on the
+  `fontSizes` scale in `theme/tokens.ts`, floor 11.
+- **Bottom sheets** no longer lock the app on dismiss — two effects in `BottomSheet.tsx` were
+  cancelling each other's close animation, so the modal never unmounted and its backdrop
+  covered a dead screen. It was reachable from the XP figure on every quest detail screen.
+- **Activity notes** (500 chars) and **creation-order** quests within a category; the Quests
+  tab shows per-category progress, so a category reads as the routine it is being used as.
+- **The streak calendar** is week-aligned (7 weekday rows x 5 week columns) with a legend,
+  replacing a flat 35-day run wrapped into rows of seven under left/right labels that
+  described an axis it didn't have.
+
 Known gaps, mobile:
 
 - `apps/mobile/app/(app)/quests/[id].tsx`: `item.progress` is set into `localProgress` once on
@@ -231,10 +259,15 @@ Known gaps, mobile:
   the app yet — only activities have an edit/archive screen. A category with activities still
   pointing at it can't be deleted anyway (FK is `on delete cascade`, which would silently take
   the activities with it), so category deletion needs its own UX decision, not just a button.
-- `apps/mobile` has no test runner yet (`package.json`'s `test` script is a placeholder) — the
-  activity-management and Stats/Challenges code above is covered by `pnpm typecheck`/
-  `pnpm lint`/`expo export` and manual device testing, not unit tests. `GET /api/challenges`
-  itself does have real-DB tests (`apps/web/app/api/challenges/route.test.ts`).
+- `apps/mobile` now has Vitest (`vitest.config.ts`, `lib/**/*.test.ts`, no DB or network —
+  `lib/api` is mocked, because importing it reaches `lib/supabase`, which reads
+  `EXPO_PUBLIC_*` at module scope and registers an AppState listener). Coverage is
+  deliberately narrow: `lib/bootstrap.ts` (cache, dedupe, invalidation, the signup retry) and
+  `lib/questFormat.ts` (which source a completion may claim). Everything else — every screen,
+  every component, `lib/statsProgress.ts`, `lib/notifications.ts` — is still covered only by
+  `pnpm typecheck`/`pnpm lint`/`expo export` and manual device testing. There is no React
+  renderer here, so anything that renders or touches a native module is out of scope until one
+  is added.
 
 Known gaps, backend/game-rules:
 
@@ -281,10 +314,11 @@ Known gaps, backend/game-rules:
 
 Not yet started:
 
-1. **Mobile type/test infra**: replace the hand-authored `MobileDatabase` type
+1. **Mobile type infra**: replace the hand-authored `MobileDatabase` type
    (`apps/mobile/lib/supabase.ts`) with Supabase-generated types, the same way `packages/db`
-   already generates its own (see `packages/db/README.md`), and give `apps/mobile` a real test
-   runner — today's `test` script is a placeholder (see "Known gaps, mobile" above).
+   already generates its own (see `packages/db/README.md`, including its warning about what
+   the current CLI drops). The test-runner half of this is done — see "Known gaps, mobile"
+   for what it does and doesn't cover.
 2. **Google Sign-In** (via a Google Cloud project), wired into both apps' auth layers.
 
 Shipped: notifications, Health Connect + GPS run tracking, original branding, `/privacy` +
