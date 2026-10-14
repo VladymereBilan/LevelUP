@@ -26,7 +26,7 @@ import {
   CATEGORY_COLOR_OPTIONS,
   CATEGORY_ICON_OPTIONS,
   getCategoryIcon,
-  questSourceForMetric,
+  bestCaseSourceForMetric,
 } from "../lib/questFormat";
 import { colors, fontSizes, fonts, statLabels } from "../theme/tokens";
 
@@ -259,7 +259,7 @@ export function ActivityForm({
   const canSubmit = !submitting && !nameError && !categoryError && targetValid && !scheduleError;
 
   const xpPreview = useMemo(
-    () => calcQuestXp({ difficulty, source: questSourceForMetric(metricType), streakDays }),
+    () => calcQuestXp({ difficulty, source: bestCaseSourceForMetric(metricType), streakDays }),
     [difficulty, metricType, streakDays],
   );
 

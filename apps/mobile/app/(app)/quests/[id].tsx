@@ -22,7 +22,7 @@ import {
 import {
   formatProgressLabel,
   progressPercent,
-  questSourceForMetric,
+  sourceForCompletion,
 } from "../../../lib/questFormat";
 import {
   requestLocationPermission,
@@ -231,7 +231,7 @@ export default function QuestDetailScreen() {
     }
 
     try {
-      const source = questSourceForMetric(item.metricType);
+      const source = sourceForCompletion(item.metricType, finalProgress, item.target);
       const result = await completeQuest(item.questId, {
         progress: finalProgress,
         ...(source === "manual" ? {} : { source }),
@@ -302,10 +302,13 @@ export default function QuestDetailScreen() {
   const alreadyCompleted = item.status === "completed";
   const percent = progressPercent(item.metricType, localProgress, item.target);
   const progressLabel = formatProgressLabel(item.metricType, localProgress, item.target);
-  // The same inputs handleComplete submits, so what's previewed is what gets awarded.
+  // The same inputs handleComplete submits, so what's previewed is what gets awarded. Now
+  // that the source depends on progress, this figure rises as the player works: starting the
+  // timer on a 20-minute quest moves it from the manual 0.6x to the timer 0.8x once the
+  // target is met, which is the incentive the multipliers were written for, finally visible.
   const xpBreakdown = explainQuestXp({
     difficulty: item.difficulty,
-    source: questSourceForMetric(item.metricType),
+    source: sourceForCompletion(item.metricType, localProgress, item.target),
     streakDays,
   });
 

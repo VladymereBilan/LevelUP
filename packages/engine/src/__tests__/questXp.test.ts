@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { BASE_QUEST_XP, calcQuestXp, capDailyXp, explainQuestXp } from "../questXp";
+import {
+  BASE_QUEST_XP,
+  SOURCES_BY_METRIC_TYPE,
+  SOURCE_MULTIPLIERS,
+  calcQuestXp,
+  capDailyXp,
+  explainQuestXp,
+  isSourcePossibleForMetric,
+} from "../questXp";
 
 describe("calcQuestXp", () => {
   it("returns the base XP for normal difficulty, manual source, no streak", () => {
@@ -112,6 +120,47 @@ describe("explainQuestXp", () => {
         for (const streakDays of [0, 1, 3, 7, 10, 11, 50, 365]) {
           const input = { difficulty, source, streakDays };
           expect(explainQuestXp(input).total).toBe(calcQuestXp(input));
+        }
+      }
+    }
+  });
+});
+
+describe("isSourcePossibleForMetric", () => {
+  it("lets a minutes activity claim the timer but nothing else", () => {
+    expect(isSourcePossibleForMetric("minutes", "timer")).toBe(true);
+    expect(isSourcePossibleForMetric("minutes", "manual")).toBe(true);
+    expect(isSourcePossibleForMetric("minutes", "health")).toBe(false);
+  });
+
+  it("lets the device-measured metrics claim health", () => {
+    expect(isSourcePossibleForMetric("distance", "health")).toBe(true);
+    expect(isSourcePossibleForMetric("steps", "health")).toBe(true);
+  });
+
+  it("refuses a timer or health claim from a metric with neither control", () => {
+    // The exploitable shape: a checkbox quest paying the health multiplier for a tap.
+    for (const metricType of ["checkbox", "reps", "sets_reps_weight"] as const) {
+      expect(isSourcePossibleForMetric(metricType, "timer")).toBe(false);
+      expect(isSourcePossibleForMetric(metricType, "health")).toBe(false);
+    }
+  });
+
+  it("always allows manual, since anything can be reported by hand", () => {
+    for (const metricType of Object.keys(
+      SOURCES_BY_METRIC_TYPE,
+    ) as (keyof typeof SOURCES_BY_METRIC_TYPE)[]) {
+      expect(isSourcePossibleForMetric(metricType, "manual")).toBe(true);
+    }
+  });
+
+  it("never allows a source worth more than manual without a control that could measure it", () => {
+    // Stated as the property rather than a table, so a metric type added later has to
+    // justify any bonus source it declares instead of inheriting one by omission.
+    for (const [metricType, sources] of Object.entries(SOURCES_BY_METRIC_TYPE)) {
+      for (const source of sources) {
+        if (SOURCE_MULTIPLIERS[source] > SOURCE_MULTIPLIERS.manual) {
+          expect(["minutes", "distance", "steps"]).toContain(metricType);
         }
       }
     }

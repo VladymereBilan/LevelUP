@@ -12,15 +12,63 @@ export function initials(username: string): string {
   return (letters.slice(0, 2).join("") || username.slice(0, 2)).toUpperCase();
 }
 
-/** Which XP source multiplier a completion from the quest detail screen earns — the screen
- * offers exactly one control per metric type, so the metric type is what decides it: a
- * GPS-tracked run is "health", a stopwatch-tracked session is "timer", a tap is "manual".
- * Steps are "manual" here because this screen's control is the +/- stepper; a Health
- * Connect sync completes with "health" from the Health Connect screen instead. */
-export function questSourceForMetric(metricType: MetricType): QuestSource {
+/**
+ * The best source a quest of this metric type could earn — what it is worth when done the
+ * way it is meant to be done. For the XP figure on a quest card and on the activity form,
+ * where the point is what the work is worth, not what any particular completion claimed.
+ *
+ * Never use this to complete a quest: see sourceForCompletion.
+ */
+export function bestCaseSourceForMetric(metricType: MetricType): QuestSource {
   if (metricType === "distance") return "health";
   if (metricType === "minutes") return "timer";
   return "manual";
+}
+
+/**
+ * The source a completion may honestly claim, from what was actually recorded rather than
+ * from how the activity happens to be configured.
+ *
+ * This used to be decided by metric type alone, on the assumption that a screen offering a
+ * timer meant the timer got used. It doesn't: Complete Quest is pressable at any time, so a
+ * 20-minute quest reported "timer" (0.8x) after zero minutes, and — worse — a distance quest
+ * reported "health", the highest multiplier in the game, for never having moved. The source
+ * multipliers exist precisely to make verified effort worth more than a tap, and deciding
+ * them from configuration rather than from what happened quietly undid that.
+ *
+ * Progress is the evidence, and it is good evidence: the detail screen offers exactly one
+ * control per metric type, and for the two that carry a bonus it is the only way to move the
+ * number — minutes advance solely from the timer, distance solely from GPS tracking. Reading
+ * progress rather than tracking "did they press start" also survives leaving the screen and
+ * coming back, because progress is persisted and transient state is not.
+ *
+ * Short of the target earns "manual": a bonus for verified effort should require the effort,
+ * not the intention. Metrics whose best case is already "manual" — checkbox, reps, sets,
+ * steps — are unaffected either way, so this only moves the two cases that were exploitable.
+ */
+export function sourceForCompletion(
+  metricType: MetricType,
+  progress: number,
+  target: ActivityTarget,
+): QuestSource {
+  return meetsTarget(metricType, progress, target) ? bestCaseSourceForMetric(metricType) : "manual";
+}
+
+/**
+ * Whether recorded progress actually reaches the target.
+ *
+ * Compares against the target directly rather than going through progressPercent, which
+ * rounds: at a 2000m target, 1999m rounds to 100% and would have been paid the full
+ * device-measured bonus. Rounding is right for a progress bar and wrong for a rule, so the
+ * rule doesn't borrow it.
+ */
+export function meetsTarget(
+  metricType: MetricType,
+  progress: number,
+  target: ActivityTarget,
+): boolean {
+  const denominator = targetDenominator(metricType, target);
+  return denominator > 0 && progress >= denominator;
 }
 
 export function formatProgressLabel(

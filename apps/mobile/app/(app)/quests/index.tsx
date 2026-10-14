@@ -19,7 +19,7 @@ import {
   formatProgressLabel,
   getCategoryIcon,
   progressPercent,
-  questSourceForMetric,
+  bestCaseSourceForMetric,
 } from "../../../lib/questFormat";
 import { useFocusLoad, type LoadMode } from "../../../lib/useFocusLoad";
 import { colors, fontSizes, fonts } from "../../../theme/tokens";
@@ -276,7 +276,7 @@ export default function QuestsScreen() {
               {group.items.map((item) => {
                 const xp = calcQuestXp({
                   difficulty: item.difficulty,
-                  source: questSourceForMetric(item.metricType),
+                  source: bestCaseSourceForMetric(item.metricType),
                   streakDays,
                 });
                 return (

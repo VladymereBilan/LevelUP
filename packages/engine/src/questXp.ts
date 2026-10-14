@@ -1,4 +1,4 @@
-import type { Difficulty, QuestSource } from "./types";
+import type { Difficulty, MetricType, QuestSource } from "./types";
 
 /** Base XP awarded by a "normal" difficulty, "manual" source quest with no streak. */
 export const BASE_QUEST_XP = 20;
@@ -14,6 +14,33 @@ export const SOURCE_MULTIPLIERS: Record<QuestSource, number> = {
   timer: 0.8,
   manual: 0.6,
 };
+
+/**
+ * Which sources each metric type can legitimately produce evidence for.
+ *
+ * `timer` means a stopwatch ran, so only a minutes-based activity can claim it. `health`
+ * means a device measured the work — GPS for distance, a health platform for steps — so
+ * nothing else can. Everything can be reported by hand.
+ *
+ * A server resolving a completion cannot verify that a timer truly ran, but it can refuse a
+ * claim that is impossible for the activity in question, which is what this is for: the
+ * source multiplier is the difference between a tap and real effort, and a client (or a
+ * hand-written request) should not be able to claim the richer multiplier on an activity that
+ * could never have earned it.
+ */
+export const SOURCES_BY_METRIC_TYPE: Record<MetricType, readonly QuestSource[]> = {
+  checkbox: ["manual"],
+  minutes: ["manual", "timer"],
+  reps: ["manual"],
+  sets_reps_weight: ["manual"],
+  distance: ["manual", "health"],
+  steps: ["manual", "health"],
+};
+
+/** Whether `source` is a claim this metric type could ever honestly make. */
+export function isSourcePossibleForMetric(metricType: MetricType, source: QuestSource): boolean {
+  return SOURCES_BY_METRIC_TYPE[metricType].includes(source);
+}
 
 /** Streak bonus accrues per consecutive day, capped so it never dominates the award. */
 export const STREAK_BONUS_PER_DAY = 0.025;

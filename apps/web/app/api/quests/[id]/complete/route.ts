@@ -8,6 +8,7 @@ import {
   DEFAULT_DAILY_XP_CAP,
   getLocalDateString,
   getRank,
+  isSourcePossibleForMetric,
   recordStreakCompletion,
   type Difficulty,
   type MetricType,
@@ -65,7 +66,7 @@ export async function POST(
   const body: unknown = await request.json().catch(() => ({}));
   const bodyRecord =
     typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
-  const source: QuestSource =
+  const claimedSource: QuestSource =
     bodyRecord.source === "health" || bodyRecord.source === "timer" ? bodyRecord.source : "manual";
   const requestedProgress =
     typeof bodyRecord.progress === "number" ? bodyRecord.progress : undefined;
@@ -100,6 +101,15 @@ export async function POST(
   }
   const difficulty = activity.difficulty as Difficulty;
   const metricType = activity.metric_type as MetricType;
+
+  // Whether a stopwatch truly ran isn't knowable here, but a claim this activity could never
+  // have produced is: a checkbox quest has no timer and no GPS, so it cannot report anything
+  // but "manual". The source multiplier is the whole difference between a tap and real effort
+  // (0.6x against 1.0x), so an unaskable claim is downgraded rather than paid out. Silently,
+  // not as an error — the award is still correct, just not inflated.
+  const source: QuestSource = isSourcePossibleForMetric(metricType, claimedSource)
+    ? claimedSource
+    : "manual";
 
   const { data: category, error: categoryError } = await supabase
     .from("categories")
