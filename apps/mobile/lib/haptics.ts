@@ -21,6 +21,13 @@ export function questCompleted(leveledUp: boolean): void {
   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 }
 
+/** The Complete Quest press itself, fired before the request goes out so the tap is felt
+ * immediately. Deliberately lighter than questCompleted: this says "heard you", and the
+ * heavier one says "it counted". */
+export function completionTapped(): void {
+  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft).catch(() => {});
+}
+
 /** A light tick for a deliberate, reversible choice — ticking a checkbox quest, stepping reps.
  * Kept distinctly lighter than questCompleted so progress never feels like finishing. */
 export function progressTick(): void {

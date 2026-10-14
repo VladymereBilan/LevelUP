@@ -1,9 +1,10 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { xpToNext, STATS } from "@levelup/engine";
 import { Icon } from "../../components/Icon";
+import { Skeleton, SkeletonCard } from "../../components/Skeleton";
 import { Button } from "../../components/Button";
 import { LevelBadge } from "../../components/LevelBadge";
 import { RankChip } from "../../components/RankChip";
@@ -59,15 +60,48 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView
-        style={{
-          flex: 1,
-          backgroundColor: colors.background,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <ActivityIndicator color={colors.violet} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+        {/* Shaped like the real screen below, so arriving data fills this in rather than
+            replacing a centred spinner with a whole layout at once. */}
+        <View style={{ padding: 20, gap: 24 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Skeleton width={43} height={43} radius={16} />
+            <View style={{ gap: 6, flex: 1 }}>
+              <Skeleton width={70} height={8} />
+              <Skeleton width={120} height={14} />
+            </View>
+            <Skeleton width={64} height={28} radius={14} />
+          </View>
+
+          <SkeletonCard height={166}>
+            <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
+              <Skeleton width={72} height={72} radius={20} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <Skeleton width={90} height={10} />
+                <Skeleton width="70%" height={16} />
+                <Skeleton height={8} radius={4} />
+                <Skeleton width={120} height={8} />
+              </View>
+            </View>
+          </SkeletonCard>
+
+          <View style={{ gap: 10 }}>
+            <Skeleton width={80} height={9} />
+            <SkeletonCard>
+              {[0, 1, 2, 3, 4].map((row) => (
+                <View key={row} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Skeleton width={52} height={10} />
+                  <Skeleton height={8} radius={4} style={{ flex: 1 }} />
+                </View>
+              ))}
+            </SkeletonCard>
+          </View>
+
+          <View style={{ gap: 10 }}>
+            <Skeleton width={110} height={9} />
+            <SkeletonCard height={76} />
+          </View>
+        </View>
       </SafeAreaView>
     );
   }

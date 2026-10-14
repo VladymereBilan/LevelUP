@@ -13,7 +13,7 @@ import { explainQuestXp, type QuestSource } from "@levelup/engine";
 import { XpBreakdownSheet } from "../../../components/XpBreakdownSheet";
 import { useSession } from "../../../lib/AuthProvider";
 import { getMyStreak } from "../../../lib/streaks";
-import { progressTick } from "../../../lib/haptics";
+import { completionTapped, progressTick } from "../../../lib/haptics";
 import {
   acceptDailyReminderOffer,
   declineDailyReminderOffer,
@@ -201,6 +201,10 @@ export default function QuestDetailScreen() {
 
   async function handleComplete() {
     if (!item) return;
+    // Acknowledged on the press, not on the response. The result haptic still fires from
+    // QuestCompleteModal when the server has actually awarded something — this is only the
+    // press landing, which should never wait on a network round trip to be felt.
+    completionTapped();
     setCompleting(true);
     setError(null);
 
