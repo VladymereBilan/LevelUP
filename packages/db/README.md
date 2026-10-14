@@ -108,6 +108,16 @@ no `supabase login` / access token needed — apparently project-id mode doesn't
 API auth, just network access to the project. If that ever stops being true, `supabase login`
 first.
 
+**Diff the result before committing it — don't overwrite the file blind.** As of Supabase CLI
+2.5x, `gen types` emits the `Omit<Database, "__InternalSupabase">` line but no longer emits the
+`__InternalSupabase` block it refers to. That block carries `PostgrestVersion`, which is what
+lets `createClient<Database>(...)` resolve its full generic form; losing it changes how
+postgrest-js resolves query result types, and `tsc` won't necessarily complain at the call site
+(see the long comment in `apps/mobile/lib/supabase.ts` about what that failure mode looks like).
+The output is also formatted differently enough that a wholesale replacement buries the real
+change in noise. For a single new function or column, adding the entry by hand in the file's
+existing style is the safer edit.
+
 ## Seeding a user's starter template
 
 ```bash

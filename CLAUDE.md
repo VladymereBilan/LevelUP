@@ -88,9 +88,21 @@ Every table in `packages/db/supabase/migrations/` explicitly `REVOKE ALL` before
 exactly what's intended, rather than relying on Supabase's platform-default table grants — see
 the comment at the top of the RLS migration.
 
+Reads go the other way round but follow the same split. `POST /api/bootstrap` is the one
+request the app makes to draw its first screen: it runs `generate_daily_quests()`, then
+`get_home_state()`, a `stable` server-only function that returns the profile, stats, streak,
+today's board (quests already joined to their activity and category), an activity count, and the
+titles catalog with this caller's unlocked state — as one jsonb document. It decides nothing: no
+threshold, no game rule, and no date arithmetic. Before it, opening the app cost seven
+device-to-region round trips, most of them unavoidably serial. `POST /api/quests/generate`
+remains for builds already in the field.
+
 Streak logic, the daily XP cap, and quest dates all use the user's **local** date
 (`getLocalDateString(now, profile.timezone)` from `@levelup/engine`), never the server's UTC day
-— a naive UTC date would misclassify completions near local midnight.
+— a naive UTC date would misclassify completions near local midnight. This is also why
+`get_home_state()` takes the date as a parameter rather than deriving it: Postgres could do the
+arithmetic with `AT TIME ZONE`, and a second implementation would be free to disagree with the
+engine's, which is the one with the tests.
 
 ## Conventions
 
@@ -142,10 +154,12 @@ package and run its own `package.json` scripts directly.
 
 Supabase Postgres + Auth + RLS — schema and policies in `packages/db/supabase/migrations/`,
 consumed via `packages/db`'s service-role client and `apps/web`'s route handlers. Applied and
-live against the hosted project (see "Production" below). **This dev environment has no
-Docker**, so a new migration is only syntax-validated offline here (via `libpg_query`/`pglast`)
-before being pushed — see `packages/db/README.md` for the full local-dev, type-regeneration,
-seeding, and test-running instructions. Google Sign-In (via a Google Cloud project) is still
+live against the hosted project (see "Production" below). **Docker is available in this
+environment**, so a new migration should be applied and exercised against a local Supabase
+(`npx supabase start` then `npx supabase db reset`, from `packages/db`) before being pushed —
+not merely syntax-validated offline, which is all that was possible for a long stretch when
+there was no Docker here. See `packages/db/README.md` for the full local-dev,
+type-regeneration, seeding, and test-running instructions. Google Sign-In (via a Google Cloud project) is still
 planned, not yet implemented.
 
 ## Production
@@ -221,9 +235,12 @@ Known gaps, backend/game-rules:
   tests that exercise real Supabase calls require `SUPABASE_URL` to resolve to a local Supabase
   instance — they fail loudly (not skip) against any other host, with no opt-in flag, because
   the hosted project is PRODUCTION (see "Production" below and `docs/PRODUCTION.md`) and these
-  suites create/delete real auth users and rows. This dev environment has no Docker, so
-  `pnpm test` only fully exercises `packages/engine` here; see `packages/db/README.md` for the
-  local-Supabase setup needed to run the rest.
+  suites create/delete real auth users and rows. Docker IS available in this environment now,
+  so the full suite does run here — `npx supabase start` then `npx supabase db reset` from
+  `packages/db`, with `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` pointed at
+  the local instance for the run (see `packages/db/README.md`). Earlier notes in this file and
+  that README said there was no Docker; that is no longer true, and a new migration no longer
+  has to ship on offline syntax-validation alone.
 - **No title-unlocking mechanism evaluates existing titles automatically on a schedule** —
   only on quest completion (`complete_quest()`) or a manual backfill run. A title added to the
   catalog after a player already qualifies for it needs `backfill-titles` run for them (or
