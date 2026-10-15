@@ -75,7 +75,7 @@ export function DeleteAccountSheet({ visible, onClose }: DeleteAccountSheetProps
               lineHeight: 18,
             }}
           >
-            This permanently deletes your account and everything in it — level, XP, stats, streaks,
+            This permanently deletes your account and everything in it: level, XP, stats, streaks,
             categories, activities, quests, and titles. This cannot be undone.
           </Text>
         </View>

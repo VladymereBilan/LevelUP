@@ -13,6 +13,7 @@ interface ButtonProps {
   icon?: IconName;
   disabled?: boolean;
   loading?: boolean;
+  testID?: string;
 }
 
 const TEXT_COLOR: Record<ButtonVariant, string> = {
@@ -31,6 +32,7 @@ export function Button({
   icon,
   disabled,
   loading,
+  testID,
 }: ButtonProps) {
   const [pressed, setPressed] = useState(false);
   const isDisabled = disabled || loading;
@@ -59,6 +61,7 @@ export function Button({
 
   return (
     <Pressable
+      {...(testID === undefined ? {} : { testID })}
       onPress={isDisabled ? undefined : onPress}
       disabled={isDisabled}
       onPressIn={() => setPressed(true)}

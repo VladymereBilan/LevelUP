@@ -218,7 +218,7 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     "Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. Set them in " +
-      "apps/mobile/.env.local (gitignored) — see apps/mobile/README.md.",
+      "apps/mobile/.env.local (gitignored). See apps/mobile/README.md.",
   );
 }
 

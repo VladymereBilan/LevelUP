@@ -1,35 +1,45 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Icon } from "../../../components/Icon";
-import { Button } from "../../../components/Button";
-import { QuestCompleteModal } from "../../../components/QuestCompleteModal";
-import { ApiError } from "../../../lib/api";
-import { invalidateBootstrapCache } from "../../../lib/bootstrap";
-import { loadQuestDetail, updateQuestProgress, type QuestBoardItem } from "../../../lib/questBoard";
-import { completeQuest, type QuestCompleteResult } from "../../../lib/quests";
+import { Icon } from "../../../../components/Icon";
+import { Button } from "../../../../components/Button";
+import { QuestCompleteModal } from "../../../../components/QuestCompleteModal";
+import { ApiError } from "../../../../lib/api";
+import { invalidateBootstrapCache } from "../../../../lib/bootstrap";
+import {
+  loadQuestDetail,
+  updateQuestProgress,
+  type QuestBoardItem,
+} from "../../../../lib/questBoard";
+import { completeQuest, type QuestCompleteResult } from "../../../../lib/quests";
 import { explainQuestXp, type QuestSource } from "@levelup/engine";
-import { XpBreakdownSheet } from "../../../components/XpBreakdownSheet";
-import { useSession } from "../../../lib/AuthProvider";
-import { getMyStreak } from "../../../lib/streaks";
-import { completionTapped, progressTick } from "../../../lib/haptics";
+import { XpBreakdownSheet } from "../../../../components/XpBreakdownSheet";
+import { useSession } from "../../../../lib/AuthProvider";
+import { getMyStreak } from "../../../../lib/streaks";
+import { completionTapped, progressTick } from "../../../../lib/haptics";
 import {
   acceptDailyReminderOffer,
   declineDailyReminderOffer,
   shouldOfferDailyReminder,
-} from "../../../lib/notifications";
+} from "../../../../lib/notifications";
 import {
+  TYPED_ENTRY_UNITS,
+  bestCaseSourceForMetric,
   formatProgressLabel,
+  parseTypedProgress,
   progressPercent,
   sourceForCompletion,
-} from "../../../lib/questFormat";
+  typedEntryValue,
+  type ProgressOrigin,
+} from "../../../../lib/questFormat";
+import { syncTodaySteps } from "../../../../lib/healthConnect";
 import {
   requestLocationPermission,
   startRunTracking,
   type RunTracker,
-} from "../../../lib/runTracking";
-import { colors, fontSizes, fonts, gradient } from "../../../theme/tokens";
+} from "../../../../lib/runTracking";
+import { colors, fontSizes, fonts, gradient } from "../../../../theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
 
 function targetStepCount(item: QuestBoardItem): number {
@@ -66,6 +76,12 @@ export default function QuestDetailScreen() {
 
   const [item, setItem] = useState<QuestBoardItem | null>(null);
   const [localProgress, setLocalProgress] = useState(0);
+  // Sticky for the session: once a number has been hand-edited there is no honest way to
+  // tell which part of it the timer or the tracker actually measured.
+  const [progressOrigin, setProgressOrigin] = useState<ProgressOrigin>("device");
+  const [typedEntry, setTypedEntry] = useState("");
+  const [syncingSteps, setSyncingSteps] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
@@ -105,6 +121,7 @@ export default function QuestDetailScreen() {
         }
         setItem(detail);
         setLocalProgress(detail.progress);
+        setTypedEntry(typedEntryValue(detail.metricType, detail.progress));
         setRunMeters(detail.progress);
         if (session) {
           // Best-effort: a missing streak only makes the XP preview conservative, which is
@@ -151,7 +168,51 @@ export default function QuestDetailScreen() {
     // Only on an actual change: a stepper pinned at its floor or ceiling should feel inert
     // rather than buzz at every futile tap.
     if (next !== localProgress) progressTick();
+    // A tap is a self-report, same as the keyboard. Matters for steps, which can earn the
+    // health multiplier but only from an actual Health Connect read.
+    setProgressOrigin("typed");
     persistProgress(next);
+    setTypedEntry(typedEntryValue(item?.metricType ?? "reps", next));
+  }
+
+  async function syncSteps() {
+    setSyncingSteps(true);
+    setSyncNotice(null);
+    const result = await syncTodaySteps();
+    setSyncingSteps(false);
+
+    if (result.status === "unavailable") {
+      setSyncNotice("Health Connect isn't available on this device.");
+      return;
+    }
+    if (result.status === "denied") {
+      setSyncNotice("Health Connect needs permission to read your steps.");
+      return;
+    }
+    if (result.status === "failed") {
+      setSyncNotice(result.message);
+      return;
+    }
+
+    // Today's total replaces rather than adds: Health Connect reports a running count for the
+    // day, so adding it to what is already recorded would double-count every earlier sync.
+    setProgressOrigin("device");
+    persistProgress(result.steps);
+    setTypedEntry(typedEntryValue("steps", result.steps));
+    progressTick();
+  }
+
+  function handleTypedEntry(text: string) {
+    if (!item) return;
+    setTypedEntry(text);
+
+    const parsed = parseTypedProgress(item.metricType, text);
+    // null is "not a number yet" (a lone "-", a stray letter). Leave the stored progress
+    // where it is rather than snapping it to zero mid-keystroke.
+    if (parsed === null) return;
+
+    setProgressOrigin("typed");
+    persistProgress(parsed);
   }
 
   function startTimer() {
@@ -172,6 +233,7 @@ export default function QuestDetailScreen() {
     const addedMinutes = Math.floor(elapsedSeconds / 60);
     if (addedMinutes > 0) {
       persistProgress(localProgress + addedMinutes);
+      setTypedEntry(typedEntryValue("minutes", localProgress + addedMinutes));
     }
     setElapsedSeconds((seconds) => seconds % 60);
   }
@@ -235,7 +297,12 @@ export default function QuestDetailScreen() {
     }
 
     try {
-      const source = sourceForCompletion(item.metricType, finalProgress, item.target);
+      const source = sourceForCompletion(
+        item.metricType,
+        finalProgress,
+        item.target,
+        progressOrigin,
+      );
       const result = await completeQuest(item.questId, {
         progress: finalProgress,
         ...(source === "manual" ? {} : { source }),
@@ -312,7 +379,7 @@ export default function QuestDetailScreen() {
   // target is met, which is the incentive the multipliers were written for, finally visible.
   const xpBreakdown = explainQuestXp({
     difficulty: item.difficulty,
-    source: sourceForCompletion(item.metricType, localProgress, item.target),
+    source: sourceForCompletion(item.metricType, localProgress, item.target, progressOrigin),
     streakDays,
   });
 
@@ -345,7 +412,11 @@ export default function QuestDetailScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 0, gap: 24, flexGrow: 1 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingTop: 0, gap: 24, flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {/* Above the progress card on purpose: a note is what the player wrote to read at
             this exact moment — the weights to lift, the chapter to open — so it comes before
             the numbers rather than buried under them. */}
@@ -512,6 +583,31 @@ export default function QuestDetailScreen() {
                 <Icon name="plus" size={18} color={colors.violetLight} />
               </Pressable>
             </View>
+
+            {item.metricType === "steps" ? (
+              <View style={{ alignItems: "center", gap: 8 }}>
+                <Button
+                  testID="sync-steps"
+                  variant="secondary"
+                  icon="sparkles"
+                  loading={syncingSteps}
+                  disabled={alreadyCompleted}
+                  onPress={() => void syncSteps()}
+                >
+                  Sync from Health Connect
+                </Button>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: fontSizes.label,
+                    textAlign: "center",
+                  }}
+                >
+                  {syncNotice ??
+                    "Reads today's step total. A synced count pays the full tracked rate."}
+                </Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -533,6 +629,55 @@ export default function QuestDetailScreen() {
                 style={{ color: colors.danger, fontSize: fontSizes.caption, textAlign: "center" }}
               >
                 {runError}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {item.metricType !== "checkbox" ? (
+          <View style={{ gap: 6 }}>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: fontSizes.label,
+                fontWeight: "700",
+                letterSpacing: 1.2,
+              }}
+            >
+              ENTER IT YOURSELF
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <TextInput
+                testID="typed-progress-input"
+                value={typedEntry}
+                onChangeText={handleTypedEntry}
+                editable={!alreadyCompleted}
+                keyboardType={item.metricType === "distance" ? "decimal-pad" : "number-pad"}
+                placeholder="0"
+                placeholderTextColor={colors.disabled}
+                style={{
+                  flex: 1,
+                  minHeight: 44,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.bodyLarge,
+                  backgroundColor: "rgba(11,11,20,0.5)",
+                }}
+              />
+              <Text style={{ color: colors.muted, fontSize: fontSizes.body, minWidth: 56 }}>
+                {TYPED_ENTRY_UNITS[item.metricType]}
+              </Text>
+            </View>
+            {progressOrigin === "typed" && bestCaseSourceForMetric(item.metricType) !== "manual" ? (
+              <Text
+                testID="typed-rate-notice"
+                style={{ color: colors.muted, fontSize: fontSizes.label }}
+              >
+                Hand-logged, so this one pays the manual rate.
               </Text>
             ) : null}
           </View>

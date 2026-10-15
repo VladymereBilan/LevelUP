@@ -2,16 +2,16 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ActivityForm, type ActivityFormValues } from "../../../../components/ActivityForm";
-import { Icon } from "../../../../components/Icon";
-import { ApiError } from "../../../../lib/api";
-import { createActivity } from "../../../../lib/activities";
-import { useSession } from "../../../../lib/AuthProvider";
-import { createCategory, listMyCategories, type CategoryRow } from "../../../../lib/categories";
-import { invalidateBootstrapCache } from "../../../../lib/bootstrap";
-import { getMyStreak } from "../../../../lib/streaks";
-import { useFocusLoad } from "../../../../lib/useFocusLoad";
-import { colors, fontSizes, fonts } from "../../../../theme/tokens";
+import { ActivityForm, type ActivityFormValues } from "../../../../../components/ActivityForm";
+import { Icon } from "../../../../../components/Icon";
+import { ApiError } from "../../../../../lib/api";
+import { createActivity } from "../../../../../lib/activities";
+import { useSession } from "../../../../../lib/AuthProvider";
+import { createCategory, listMyCategories, type CategoryRow } from "../../../../../lib/categories";
+import { invalidateBootstrapCache } from "../../../../../lib/bootstrap";
+import { getMyStreak } from "../../../../../lib/streaks";
+import { useFocusLoad } from "../../../../../lib/useFocusLoad";
+import { colors, fontSizes, fonts } from "../../../../../theme/tokens";
 
 export default function NewActivityScreen() {
   const { session } = useSession();
@@ -103,7 +103,7 @@ export default function NewActivityScreen() {
           marginBottom: 14,
         }}
       >
-        One thing you want to track — a single exercise, a study block, a habit. It becomes a quest
+        One thing you want to track: a single exercise, a study block, a habit. It becomes a quest
         on the days you schedule it.
       </Text>
 
@@ -112,7 +112,11 @@ export default function NewActivityScreen() {
           <ActivityIndicator color={colors.violet} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 0, paddingBottom: 40 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 20, paddingTop: 0, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           <ActivityForm
             categories={categories}
             allowNewCategory

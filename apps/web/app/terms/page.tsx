@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — LEVEL UP",
+  title: "Terms of Service | LEVEL UP",
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -24,7 +24,7 @@ export default function TermsOfServicePage() {
       <Section title="Using the app">
         <p>
           LEVEL UP is a personal habit tracker. You create an account, define activities you want to
-          track, and complete quests to earn XP, stats, and ranks. It&apos;s for personal use —
+          track, and complete quests to earn XP, stats, and ranks. It&apos;s for personal use,
           don&apos;t use it to impersonate another person or submit activity data that isn&apos;t
           your own.
         </p>
@@ -50,7 +50,7 @@ export default function TermsOfServicePage() {
 
       <Section title="No physical penalties">
         <p>
-          Missing a quest never prescribes a physical penalty — any penalty is limited to XP loss,
+          Missing a quest never prescribes a physical penalty. Any penalty is limited to XP loss,
           stat decay, or a locked in-app reward. The app will never tell you to exercise, or do
           anything physical, as a punishment.
         </p>
@@ -59,7 +59,7 @@ export default function TermsOfServicePage() {
       <Section title="Account termination">
         <p>
           You can stop using the app at any time and delete your account yourself, in-app or by
-          email — see{" "}
+          email. See{" "}
           <a href="/delete-account" className="text-violet underline">
             Delete Your Account
           </a>

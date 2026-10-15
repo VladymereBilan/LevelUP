@@ -9,7 +9,6 @@ import {
   MAX_SETS_TARGET,
   MAX_STEPS_TARGET,
   MAX_WEIGHT_KG,
-  STATS,
   getLocalDateString,
   type ActivityTarget,
   type Difficulty,
@@ -17,7 +16,8 @@ import {
   type Schedule,
   type Stat,
 } from "@levelup/engine";
-import { Chip, Swatch } from "./Chip";
+import { Chip } from "./Chip";
+import { CategoryFields } from "./CategoryFields";
 import type { IconName } from "./Icon";
 import { Stepper } from "./Stepper";
 import { Button } from "./Button";
@@ -28,7 +28,15 @@ import {
   getCategoryIcon,
   bestCaseSourceForMetric,
 } from "../lib/questFormat";
-import { colors, fontSizes, fonts, statLabels } from "../theme/tokens";
+import {
+  SCHEDULE_PRESET_LABELS,
+  SCHEDULE_PRESET_SUMMARIES,
+  presetForSchedule,
+  scheduleForPreset,
+  schedulePresetError,
+  type SchedulePreset,
+} from "../lib/schedulePresets";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 const METRIC_OPTIONS: { value: MetricType; label: string }[] = [
   { value: "checkbox", label: "Checkbox" },
@@ -39,11 +47,7 @@ const METRIC_OPTIONS: { value: MetricType; label: string }[] = [
   { value: "steps", label: "Steps" },
 ];
 
-const SCHEDULE_OPTIONS: { value: Schedule["kind"]; label: string }[] = [
-  { value: "daily", label: "Daily" },
-  { value: "weekdays", label: "Weekdays" },
-  { value: "one_off", label: "One-time" },
-];
+const SCHEDULE_PRESETS: SchedulePreset[] = ["daily", "weekdays", "weekends", "custom", "one_off"];
 
 const DIFFICULTY_OPTIONS: { value: Difficulty; label: string }[] = [
   { value: "easy", label: "Easy" },
@@ -129,12 +133,6 @@ interface ActivityFormProps {
   onSubmit: (values: ActivityFormValues) => void;
 }
 
-const SCHEDULE_SUMMARY: Record<Schedule["kind"], string> = {
-  daily: "Every day",
-  weekdays: "Chosen weekdays",
-  one_off: "One-off",
-};
-
 /** One short phrase for the collapsed summary: what the player will actually do, rather than
  * the metric type's internal name. */
 function summarizeTarget(target: ActivityTarget): string {
@@ -203,10 +201,11 @@ export function ActivityForm({
   const [target, setTarget] = useState<ActivityTarget>(
     initialValues?.target ?? defaultTargetFor("checkbox"),
   );
-  const [scheduleKind, setScheduleKind] = useState<Schedule["kind"]>(
-    initialValues?.schedule.kind ?? "daily",
+  const [schedulePreset, setSchedulePreset] = useState<SchedulePreset>(
+    initialValues ? presetForSchedule(initialValues.schedule) : "daily",
   );
-  const [weekdays, setWeekdays] = useState<number[]>(
+  // Only ever read by the `custom` preset; Weekdays and Weekends fill their own days in.
+  const [customDays, setCustomDays] = useState<number[]>(
     initialValues?.schedule.kind === "weekdays" ? [...(initialValues.schedule.weekdays ?? [])] : [],
   );
   const [oneOffOffset, setOneOffOffset] = useState(
@@ -226,13 +225,26 @@ export function ActivityForm({
     setTarget(defaultTargetFor(next));
   }
 
-  function toggleWeekday(day: number) {
-    setWeekdays((current) =>
-      current.includes(day) ? current.filter((d) => d !== day) : [...current, day].sort(),
+  function toggleCustomDay(day: number) {
+    setCustomDays((current) =>
+      current.includes(day)
+        ? current.filter((d) => d !== day)
+        : [...current, day].sort((a, b) => a - b),
     );
   }
 
   const nameError = name.trim().length === 0 ? "Activity name is required." : null;
+
+  // Nothing downstream prevents two categories sharing a name: `categories` has no unique
+  // constraint on (user_id, name), and the inline create path inserts unconditionally. So a
+  // player who typed the same name on two different activities ended up with two identical
+  // chips and no way to tell them apart or merge them.
+  const duplicateCategory =
+    categoryMode === "new"
+      ? categories.find(
+          (category) => category.name.trim().toLowerCase() === newCategoryName.trim().toLowerCase(),
+        )
+      : undefined;
 
   const categoryError =
     categoryMode === "existing"
@@ -241,7 +253,9 @@ export function ActivityForm({
         : null
       : newCategoryName.trim().length === 0
         ? "Category name is required."
-        : null;
+        : duplicateCategory
+          ? `You already have a category called "${duplicateCategory.name}". Pick it under Existing instead.`
+          : null;
 
   const targetValid = isSafeActivityTarget(target);
   const targetError = targetValid
@@ -258,8 +272,7 @@ export function ActivityForm({
               ? `Steps must be between 1 and ${MAX_STEPS_TARGET}.`
               : null;
 
-  const scheduleError =
-    scheduleKind === "weekdays" && weekdays.length === 0 ? "Pick at least one day." : null;
+  const scheduleError = schedulePresetError(schedulePreset, customDays);
 
   const canSubmit = !submitting && !nameError && !categoryError && targetValid && !scheduleError;
 
@@ -269,15 +282,13 @@ export function ActivityForm({
   );
 
   const defaultsSummary = [
-    SCHEDULE_SUMMARY[scheduleKind],
+    SCHEDULE_PRESET_SUMMARIES[schedulePreset],
     DIFFICULTY_OPTIONS.find((option) => option.value === difficulty)?.label ?? difficulty,
     summarizeTarget(target),
   ].join("  ·  ");
 
   function buildSchedule(): Schedule {
-    if (scheduleKind === "daily") return { kind: "daily" };
-    if (scheduleKind === "weekdays") return { kind: "weekdays", weekdays };
-    return { kind: "one_off", date: offsetFromToday(oneOffOffset) };
+    return scheduleForPreset(schedulePreset, customDays, offsetFromToday(oneOffOffset));
   }
 
   function handleSubmit() {
@@ -346,56 +357,20 @@ export function ActivityForm({
             ))}
           </View>
         ) : (
-          <View style={{ gap: 14 }}>
-            <TextInput
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
-              placeholder="e.g. Strength"
-              placeholderTextColor={colors.disabled}
-              maxLength={40}
-              style={{
-                minHeight: 48,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: "rgba(18,18,31,0.75)",
-                color: colors.text,
-                paddingHorizontal: 14,
-                fontSize: 14,
-              }}
-            />
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {CATEGORY_ICON_OPTIONS.map((icon) => (
-                <Chip
-                  key={icon}
-                  label={icon}
-                  icon={icon}
-                  selected={newCategoryIcon === icon}
-                  onPress={() => setNewCategoryIcon(icon)}
-                />
-              ))}
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {CATEGORY_COLOR_OPTIONS.map((color) => (
-                <Swatch
-                  key={color}
-                  color={color}
-                  selected={newCategoryColor === color}
-                  onPress={() => setNewCategoryColor(color)}
-                />
-              ))}
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {STATS.map((stat) => (
-                <Chip
-                  key={stat}
-                  label={statLabels[stat]}
-                  selected={newCategoryStat === stat}
-                  onPress={() => setNewCategoryStat(stat)}
-                />
-              ))}
-            </View>
-          </View>
+          <CategoryFields
+            values={{
+              name: newCategoryName,
+              icon: newCategoryIcon,
+              color: newCategoryColor,
+              stat: newCategoryStat,
+            }}
+            onChange={(next) => {
+              setNewCategoryName(next.name);
+              setNewCategoryIcon(next.icon);
+              setNewCategoryColor(next.color);
+              setNewCategoryStat(next.stat);
+            }}
+          />
         )}
         {fieldError(categoryError)}
       </View>
@@ -469,10 +444,11 @@ export function ActivityForm({
             {label("TARGET")}
             {target.type === "checkbox" ? (
               <Text style={{ color: colors.muted, fontSize: fontSizes.caption }}>
-                Just mark it done — no target.
+                Just mark it done, with no target.
               </Text>
             ) : target.type === "minutes" ? (
               <Stepper
+                testID="target-minutes"
                 value={target.minutes}
                 min={1}
                 max={MAX_MINUTES_TARGET}
@@ -481,6 +457,7 @@ export function ActivityForm({
               />
             ) : target.type === "reps" ? (
               <Stepper
+                testID="target-reps"
                 value={target.reps}
                 min={1}
                 max={MAX_REPS_TARGET}
@@ -489,6 +466,7 @@ export function ActivityForm({
               />
             ) : target.type === "distance" ? (
               <Stepper
+                testID="target-distance"
                 value={target.meters / 1000}
                 min={0.5}
                 max={MAX_DISTANCE_METERS / 1000}
@@ -498,6 +476,7 @@ export function ActivityForm({
               />
             ) : target.type === "steps" ? (
               <Stepper
+                testID="target-steps"
                 value={target.steps}
                 min={500}
                 max={MAX_STEPS_TARGET}
@@ -510,6 +489,7 @@ export function ActivityForm({
                 <View style={{ gap: 6 }}>
                   <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>Sets</Text>
                   <Stepper
+                    testID="target-sets"
                     value={target.sets}
                     min={1}
                     max={MAX_SETS_TARGET}
@@ -521,6 +501,7 @@ export function ActivityForm({
                     Reps per set
                   </Text>
                   <Stepper
+                    testID="target-reps-per-set"
                     value={target.reps}
                     min={1}
                     max={MAX_REPS_TARGET}
@@ -532,6 +513,7 @@ export function ActivityForm({
                     Weight (kg, optional)
                   </Text>
                   <Stepper
+                    testID="target-weight"
                     value={target.weightKg ?? 0}
                     min={0}
                     max={MAX_WEIGHT_KG}
@@ -555,33 +537,46 @@ export function ActivityForm({
           <View style={{ gap: 10 }}>
             {label("SCHEDULE")}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {SCHEDULE_OPTIONS.map((option) => (
+              {SCHEDULE_PRESETS.map((preset) => (
                 <Chip
-                  key={option.value}
-                  label={option.label}
-                  selected={scheduleKind === option.value}
-                  onPress={() => setScheduleKind(option.value)}
+                  key={preset}
+                  testID={`schedule-preset-${preset}`}
+                  label={SCHEDULE_PRESET_LABELS[preset]}
+                  selected={schedulePreset === preset}
+                  onPress={() => setSchedulePreset(preset)}
                 />
               ))}
             </View>
-            {scheduleKind === "weekdays" ? (
+            {schedulePreset === "weekdays" || schedulePreset === "weekends" ? (
+              <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+                {SCHEDULE_PRESET_SUMMARIES[schedulePreset]}
+              </Text>
+            ) : null}
+            {schedulePreset === "custom" ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {WEEKDAY_LABELS.map((dayLabel, day) => (
                   <Chip
                     key={day}
+                    testID={`schedule-day-${day}`}
                     label={dayLabel}
-                    selected={weekdays.includes(day)}
-                    onPress={() => toggleWeekday(day)}
+                    selected={customDays.includes(day)}
+                    onPress={() => toggleCustomDay(day)}
                   />
                 ))}
               </View>
             ) : null}
-            {scheduleKind === "one_off" ? (
+            {schedulePreset === "one_off" ? (
               <View style={{ gap: 6 }}>
                 <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
                   Days from today
                 </Text>
-                <Stepper value={oneOffOffset} min={0} max={365} onChange={setOneOffOffset} />
+                <Stepper
+                  testID="one-off-offset"
+                  value={oneOffOffset}
+                  min={0}
+                  max={365}
+                  onChange={setOneOffOffset}
+                />
                 <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
                   {offsetFromToday(oneOffOffset)}
                 </Text>

@@ -131,13 +131,15 @@ interface IconProps {
   name: IconName;
   size?: number;
   color?: string;
+  testID?: string;
 }
 
 /** A fixed set of hand-redrawn vector icons, shared across the app. */
-export function Icon({ name, size = 20, color = colors.text }: IconProps) {
+export function Icon({ name, size = 20, color = colors.text, testID }: IconProps) {
   const filled = name === "google";
   return (
     <Svg
+      {...(testID === undefined ? {} : { testID })}
       width={size}
       height={size}
       viewBox="0 0 24 24"

@@ -159,7 +159,7 @@ function addDays(dateIso: string, days: number): string {
 export async function getStreakCalendar(
   userId: string,
   timezone: string,
-  weeks = 5,
+  weeks = 13,
 ): Promise<StreakCalendar> {
   const today = getLocalDateString(new Date(), timezone);
   // The grid's last column is the current week, so it starts on the Sunday (weeks - 1)

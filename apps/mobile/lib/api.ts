@@ -5,7 +5,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 if (!API_URL) {
   throw new Error(
-    "Missing EXPO_PUBLIC_API_URL. Set it in apps/mobile/.env.local (gitignored) — see apps/mobile/README.md.",
+    "Missing EXPO_PUBLIC_API_URL. Set it in apps/mobile/.env.local (gitignored). See apps/mobile/README.md.",
   );
 }
 
@@ -136,7 +136,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   if (response.status === 429) {
-    throw new ApiError("rate_limited", "You're doing that too fast — try again in a minute.", 429);
+    throw new ApiError("rate_limited", "You're doing that too fast. Try again in a minute.", 429);
   }
 
   const body = await parseJsonBody(response);

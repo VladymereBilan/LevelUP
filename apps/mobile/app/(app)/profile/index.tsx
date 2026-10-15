@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Constants from "expo-constants";
+import * as Application from "expo-application";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { DeleteAccountSheet } from "../../../components/DeleteAccountSheet";
@@ -61,6 +63,18 @@ function sectionHeader(label: string, trailing?: React.ReactNode) {
       {trailing}
     </View>
   );
+}
+
+/**
+ * Version name plus build number, because only the second one identifies a build: v4, v5 and
+ * v6 all shipped as 1.0.0, so a bug report could not be tied to what the tester was running.
+ * The build number is assigned by EAS (`appVersionSource: "remote"`), which is why it is read
+ * from the installed binary rather than from app.json, where it deliberately does not exist.
+ */
+function versionLabel(): string {
+  const name = Constants.expoConfig?.version ?? "dev";
+  const build = Application.nativeBuildVersion;
+  return build ? `LEVEL UP · VERSION ${name} (${build})` : `LEVEL UP · VERSION ${name}`;
 }
 
 export default function ProfileScreen() {
@@ -638,7 +652,7 @@ export default function ProfileScreen() {
             letterSpacing: 1,
           }}
         >
-          LEVEL UP · VERSION 1.0.0
+          {versionLabel()}
         </Text>
       </ScrollView>
 

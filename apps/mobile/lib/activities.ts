@@ -109,3 +109,53 @@ export async function setActivityArchived(activityId: string, archived: boolean)
   const { error } = await supabase.from("activities").update({ archived }).eq("id", activityId);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Whether an activity can be removed outright, or only archived.
+ *
+ * `quests.activity_id` is `on delete cascade`, so deleting an activity takes every quest it
+ * ever generated with it. For one with history that silently rewrites the past: the streak
+ * calendar, the challenge counts and the lifetime "quests done" total are all computed from
+ * the `quests` table, so they would drop. XP and level are safe either way, being columns on
+ * `profiles` rather than anything derived.
+ *
+ * So delete is offered only where it costs nothing, which is also where it is actually
+ * wanted: the mistyped and the experimental, the ones that never got used.
+ */
+export type ActivityRemoval =
+  { kind: "delete" } | { kind: "archive-only"; completedQuests: number };
+
+export function removalFor(completedQuests: number): ActivityRemoval {
+  return completedQuests > 0 ? { kind: "archive-only", completedQuests } : { kind: "delete" };
+}
+
+/** How many quests this activity has actually been completed on. */
+export async function countCompletedQuests(activityId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("quests")
+    .select("id", { count: "exact", head: true })
+    .eq("activity_id", activityId)
+    .eq("status", "completed");
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+/**
+ * Permanently removes an activity, and with it (by cascade) its pending quests.
+ *
+ * Refuses rather than cascading over history: the caller is expected to have checked with
+ * `removalFor`, and this re-checks because the list it decided from may be stale by the time
+ * the button is pressed.
+ */
+export async function deleteActivity(activityId: string): Promise<void> {
+  const completed = await countCompletedQuests(activityId);
+  if (completed > 0) {
+    throw new Error(
+      `This activity has ${completed} completed quest${completed === 1 ? "" : "s"}. Archive it instead to keep your history.`,
+    );
+  }
+
+  const { error } = await supabase.from("activities").delete().eq("id", activityId);
+  if (error) throw new Error(error.message);
+}

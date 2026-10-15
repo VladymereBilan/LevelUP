@@ -82,7 +82,7 @@ export async function applyNotificationSchedule(prefs: NotificationPrefs): Promi
       identifier: DAILY_REMINDER_ID,
       content: {
         title: "New Quest Available",
-        body: "Your quests for today are up — jump in and keep the streak going.",
+        body: "Your quests for today are up. Jump in and keep the streak going.",
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,

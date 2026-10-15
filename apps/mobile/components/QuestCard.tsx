@@ -11,8 +11,17 @@ interface QuestCardProps {
   xp: number;
   difficulty: Difficulty;
   icon: IconName;
+  /** The owning category's colour. Categories are created with a colour the user picks, and
+   * it had no effect anywhere on the board: this card tinted every quest the same violet,
+   * so the choice only ever showed up in the picker it was made in. */
+  tint?: string;
   complete?: boolean;
   onPress?: () => void;
+}
+
+/** Hex with an alpha suffix, for the icon well behind a category-coloured glyph. */
+function wash(color: string): string {
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? `${color}22` : "rgba(124,58,237,0.13)";
 }
 
 const DIFFICULTY_LABEL: Record<Difficulty, string> = {
@@ -29,6 +38,7 @@ export function QuestCard({
   xp,
   difficulty,
   icon,
+  tint = colors.violetLight,
   complete,
   onPress,
 }: QuestCardProps) {
@@ -42,23 +52,31 @@ export function QuestCard({
         opacity: complete ? 0.54 : 1,
       }}
     >
-      <LinearGradient
-        colors={gradient.colors}
-        start={gradient.start}
-        end={gradient.end}
-        style={{ position: "absolute", left: 0, top: 16, bottom: 16, width: 3, borderRadius: 3 }}
+      <View
+        testID="quest-card-spine"
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 16,
+          bottom: 16,
+          width: 3,
+          borderRadius: 3,
+          backgroundColor: complete ? colors.success : tint,
+        }}
       />
       <View
+        testID="quest-card-icon-well"
         className="h-[39px] w-[39px] items-center justify-center rounded-xl"
         style={{
-          backgroundColor: complete ? "rgba(34,197,94,0.1)" : "rgba(124,58,237,0.13)",
+          backgroundColor: complete ? "rgba(34,197,94,0.1)" : wash(tint),
           marginLeft: 8,
         }}
       >
         <Icon
+          testID="quest-card-icon"
           name={complete ? "check" : icon}
           size={18}
-          color={complete ? colors.success : colors.violetLight}
+          color={complete ? colors.success : tint}
         />
       </View>
       <View className="min-w-0 flex-1 gap-2">

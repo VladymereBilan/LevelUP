@@ -77,3 +77,34 @@ export async function getTodayExerciseSessions(): Promise<HealthExerciseSession[
     ),
   }));
 }
+
+/**
+ * Why this exists rather than the caller chaining the four steps itself: a quest screen
+ * needs to tell apart "this phone has no Health Connect" from "you said no" from "it broke",
+ * because each wants different words on screen, and none of them should look like an error
+ * the player caused. Returning a result instead of throwing is what keeps that distinction
+ * at the call site.
+ */
+export type StepSyncResult =
+  | { status: "ok"; steps: number }
+  | { status: "unavailable" }
+  | { status: "denied" }
+  | { status: "failed"; message: string };
+
+/** Reads today's step total, asking for availability and permission first. */
+export async function syncTodaySteps(): Promise<StepSyncResult> {
+  try {
+    if (!(await isHealthConnectAvailable())) return { status: "unavailable" };
+
+    await initializeHealthConnect();
+    const grants = await requestHealthConnectPermissions();
+    if (!grants.steps) return { status: "denied" };
+
+    return { status: "ok", steps: await getTodaySteps() };
+  } catch (err) {
+    return {
+      status: "failed",
+      message: err instanceof Error ? err.message : "Could not read from Health Connect.",
+    };
+  }
+}

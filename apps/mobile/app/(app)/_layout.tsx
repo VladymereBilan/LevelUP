@@ -2,6 +2,11 @@ import { Tabs } from "expo-router";
 import { TabIcon } from "../../components/TabIcon";
 import { colors, fontSizes, fonts } from "../../theme/tokens";
 
+/**
+ * Three tabs, down from five. Home absorbed the Quests tab — it was rendering a
+ * count of the same board and a button to go see it — and Challenges became a
+ * segment of Stats, which is where the rest of someone's progress already lives.
+ */
 export default function AppLayout() {
   return (
     <Tabs
@@ -26,17 +31,10 @@ export default function AppLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="(home)"
         options={{
           title: "Home",
           tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="quests"
-        options={{
-          title: "Quests",
-          tabBarIcon: ({ focused }) => <TabIcon name="quest" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -44,13 +42,6 @@ export default function AppLayout() {
         options={{
           title: "Stats",
           tabBarIcon: ({ focused }) => <TabIcon name="stats" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="challenges"
-        options={{
-          title: "Challenges",
-          tabBarIcon: ({ focused }) => <TabIcon name="trophy" focused={focused} />,
         }}
       />
       <Tabs.Screen

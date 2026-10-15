@@ -1,4 +1,3 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiFetch } from "./api";
 import { invalidateBootstrapCache, loadBootstrap, type BootstrapState } from "./bootstrap";
 
@@ -9,7 +8,7 @@ import { invalidateBootstrapCache, loadBootstrap, type BootstrapState } from "./
  * mock defines its own ApiError so that `instanceof` inside bootstrap.ts
  * still matches: both sides resolve to this same module instance.
  */
-vi.mock("./api", () => {
+jest.mock("./api", () => {
   class ApiError extends Error {
     readonly kind: string;
     readonly status: number;
@@ -20,10 +19,10 @@ vi.mock("./api", () => {
       this.status = status;
     }
   }
-  return { ApiError, apiFetch: vi.fn() };
+  return { ApiError, apiFetch: jest.fn() };
 });
 
-const fetchMock = vi.mocked(apiFetch);
+const fetchMock = jest.mocked(apiFetch);
 
 function stateFixture(overrides: Partial<BootstrapState> = {}): BootstrapState {
   return {
@@ -71,7 +70,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.useRealTimers();
+  jest.useRealTimers();
 });
 
 describe("loadBootstrap", () => {
@@ -89,11 +88,11 @@ describe("loadBootstrap", () => {
   it("refetches once the TTL has passed", async () => {
     // Only Date is faked: the cache compares timestamps, and faking every
     // timer here would also capture the retry delays and the awaited promises.
-    vi.useFakeTimers({ toFake: ["Date"] });
+    jest.useFakeTimers();
     fetchMock.mockResolvedValue(stateFixture());
 
     await loadBootstrap();
-    vi.setSystemTime(Date.now() + 5001);
+    jest.setSystemTime(Date.now() + 5001);
     await loadBootstrap();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -160,7 +159,7 @@ describe("loadBootstrap", () => {
 
 describe("loadBootstrap retry on a fresh signup", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    jest.useFakeTimers();
   });
 
   it("retries a 404 and succeeds once the profile row exists", async () => {
@@ -172,7 +171,7 @@ describe("loadBootstrap retry on a fresh signup", () => {
       .mockResolvedValueOnce(stateFixture());
 
     const pending = loadBootstrap();
-    await vi.advanceTimersByTimeAsync(500);
+    await jest.advanceTimersByTimeAsync(500);
 
     await expect(pending).resolves.toMatchObject({ date: "2026-10-14" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -183,7 +182,7 @@ describe("loadBootstrap retry on a fresh signup", () => {
 
     const pending = loadBootstrap();
     const assertion = expect(pending).rejects.toThrow("Profile not found");
-    await vi.advanceTimersByTimeAsync(1500);
+    await jest.advanceTimersByTimeAsync(1500);
     await assertion;
 
     // Three attempts: the first, then one per configured delay.

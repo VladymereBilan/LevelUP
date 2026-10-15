@@ -9,13 +9,15 @@ interface ChipProps {
   icon?: IconName;
   /** Overrides the selected-state tint (e.g. a category's own color, a stat's tone). */
   tint?: string;
+  testID?: string;
 }
 
 /** A single selectable pill — used for category/metric/schedule/difficulty/icon pickers
  * across the Add/Edit Activity forms. Not a radio group itself; callers manage selection. */
-export function Chip({ label, selected, onPress, icon, tint = colors.violet }: ChipProps) {
+export function Chip({ label, selected, onPress, icon, tint = colors.violet, testID }: ChipProps) {
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}

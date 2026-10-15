@@ -4,9 +4,9 @@ Paste this into a new session.
 
 ---
 
-Continuing work on LEVEL UP (F:\LevelUP). Read CLAUDE.md first — it was updated 2026-10-15
-and now describes the bootstrap read path, the XP source rule, and what the mobile tests
-actually cover.
+Continuing work on LEVEL UP (F:\LevelUP). Read CLAUDE.md first — it was updated 2026-10-16
+and now describes the three-tab navigation, the UI and copy fixes, and the move from Vitest to
+Jest for the mobile suite (which is what makes component rendering testable at all).
 
 ## Where things stand
 
@@ -35,10 +35,22 @@ success-looking summary after the error. Use `cmd >/dev/null 2>&1; echo $?`.
    **This is the one item `expo export` cannot validate** — a native misconfiguration only
    shows at runtime, so it needs a device pass before it goes anywhere near the Alpha track.
    It also replaces `lib/useFocusLoad.ts` and the hand-rolled cache in `lib/bootstrap.ts`.
-2. **Five tabs → three.** Home and Quests overlap heavily (Home renders "2 of 5 completed"
-   then a button to Quests); Challenges folds into Stats. Verified safe: notifications carry
-   only text and `+native-intent` handles one path, so no routing coupling. Moves whole
-   screens, so device-test it.
+2. ~~**Five tabs → three.**~~ **Done (2026-10-15), not yet device-tested.** Home, Stats,
+   Profile — see CLAUDE.md's "Navigation: five tabs became three" for what moved and why the
+   `(home)` group was used instead of `href: null`. Typecheck, lint, tests and `expo export`
+   all pass. **Before this goes near the Alpha track**, walk a device through: quest detail and
+   `/quests/activities` pushed from Home and backed out of, the Stats segmented control both
+   ways, and a cold start landing on `/`. Consider enabling `experiments.typedRoutes` first —
+   route strings are currently unvalidated by anything.
+
+   Same device pass covers the **2026-10-16 UI fixes**, which are also unverified on a phone:
+   the streak calendar filling its card, Weekdays/Weekends in the activity form, typing
+   progress on each metric type, typing a target into the activity form's stepper, syncing a
+   steps quest from Health Connect (needs a real Android device with Health Connect installed
+   — this is the one item with no emulator story), a new category's colour showing on the
+   board, and deleting an unused activity. All are covered by the Jest suite (`pnpm --filter @levelup/mobile test`,
+   67 tests). See CLAUDE.md's "UI and copy fixes (2026-10-16)".
+
 3. **Typed `Text` design system.** The font floor was raised but the hierarchy is thin — 111
    of ~210 text sites share the `label` tier. Needs `Text` variants, a spacing scale, and
    `Card`/`Section`/`Screen` primitives. Touches every text site again, so don't bundle it
