@@ -5,13 +5,20 @@ Paste this into a new session.
 ---
 
 Continuing work on LEVEL UP (F:\LevelUP). Read CLAUDE.md first — it was updated 2026-10-16
-and now describes the three-tab navigation, the UI and copy fixes, and the move from Vitest to
-Jest for the mobile suite (which is what makes component rendering testable at all).
+and now describes the three-tab navigation, the UI and copy fixes, the Health Connect steps
+sync, the category editor, and the move from Vitest to Jest for the mobile suite (which is
+what makes component rendering testable at all).
 
 ## Where things stand
 
-- `main` is at `f3c32fd`, CI green. **v6 (versionCode 6, commit 4115f95) is built, tested on
-  my device, and good.** Production Supabase is up to date (migration `20260310000019`).
+- `main` is at `f750961` and pushed to origin. **v7 (versionCode 7, version name 1.1.0) is
+  built and was uploaded to the Closed testing "Alpha" track by hand on 2026-10-16.** It was
+  device-tested clean against preview build `96c5aece` before the production build ran.
+  Production Supabase is up to date (migration `20260310000019`); v7 needed no migration.
+- The mobile suite is **Jest (`jest-expo`), not Vitest** — 102 tests, including real render
+  tests. `pnpm --filter @levelup/mobile test`. Everything else in the monorepo is still
+  Vitest. See CLAUDE.md for the two RNTL gotchas that cost time (async `render`/`fireEvent`,
+  and `screen` resolving to a different module instance than `render`).
 - Vercel Functions run in `hnd1`, co-located with Supabase in `ap-northeast-1`.
   `/api/health` went from a 981ms median to 252ms. Cold start is fixed.
 - 12 testers on the Closed testing "Alpha" track. The 14-day production-access clock is
@@ -20,6 +27,19 @@ Jest for the mobile suite (which is what makes component rendering testable at a
   from `packages/db`. To run the real-DB suites, export `SUPABASE_URL` / `SUPABASE_ANON_KEY` /
   `SUPABASE_SERVICE_ROLE_KEY` pointed at `127.0.0.1:54321` before `pnpm test` — the root
   `.env.local` points at PRODUCTION and the suites refuse to run against it.
+
+## Two traps that cost time on 2026-10-16
+
+An EAS build profile with no `environment` key gets **none** of the EXPO_PUBLIC_* values, and
+`.env.local` is gitignored so it never reaches EAS. The `preview` profile was missing it, and
+a preview build would have launched straight into "Missing EXPO_PUBLIC_API_URL" looking like a
+code regression. Fixed in `eas.json`; check this first if any build launches to an error
+screen.
+
+Making a value typeable makes its control wider. Two Steppers sat side by side in the
+reminder-time row and fitted only while the value was a bare label; once it became a field,
+the pair overflowed the card and clipped one control off-screen. `expo export` and every static check
+passed. Layout regressions need a device or an arithmetic budget test.
 
 ## Verify by exit code, not by tailing output
 
@@ -35,21 +55,12 @@ success-looking summary after the error. Use `cmd >/dev/null 2>&1; echo $?`.
    **This is the one item `expo export` cannot validate** — a native misconfiguration only
    shows at runtime, so it needs a device pass before it goes anywhere near the Alpha track.
    It also replaces `lib/useFocusLoad.ts` and the hand-rolled cache in `lib/bootstrap.ts`.
-2. ~~**Five tabs → three.**~~ **Done (2026-10-15), not yet device-tested.** Home, Stats,
-   Profile — see CLAUDE.md's "Navigation: five tabs became three" for what moved and why the
-   `(home)` group was used instead of `href: null`. Typecheck, lint, tests and `expo export`
-   all pass. **Before this goes near the Alpha track**, walk a device through: quest detail and
-   `/quests/activities` pushed from Home and backed out of, the Stats segmented control both
-   ways, and a cold start landing on `/`. Consider enabling `experiments.typedRoutes` first —
-   route strings are currently unvalidated by anything.
-
-   Same device pass covers the **2026-10-16 UI fixes**, which are also unverified on a phone:
-   the streak calendar filling its card, Weekdays/Weekends in the activity form, typing
-   progress on each metric type, typing a target into the activity form's stepper, syncing a
-   steps quest from Health Connect (needs a real Android device with Health Connect installed
-   — this is the one item with no emulator story), a new category's colour showing on the
-   board, and deleting an unused activity. All are covered by the Jest suite (`pnpm --filter @levelup/mobile test`,
-   67 tests). See CLAUDE.md's "UI and copy fixes (2026-10-16)".
+2. **Play Store screenshots are wrong and block production access.** Every current
+   screenshot shows the old five-tab bottom bar, and two of those tabs no longer exist as
+   destinations. Google reviews the listing when production access is applied for, and a
+   listing that misrepresents the app is a real rejection reason. Retake from the shipped
+   build: Home with a full board, a quest detail, Stats (Progress), Stats (Challenges), Add
+   Activity, Profile. **Do this before applying for production access.**
 
 3. **Typed `Text` design system.** The font floor was raised but the hierarchy is thin — 111
    of ~210 text sites share the `label` tier. Needs `Text` variants, a spacing scale, and
@@ -85,16 +96,32 @@ success-looking summary after the error. Use `cmd >/dev/null 2>&1; echo $?`.
   total, so a burst can reach ~760 against a 500 cap. Self-correcting, and with no leaderboard
   it buys nothing. Designed fix in CLAUDE.md: a `reserve_daily_xp(user, local_date, amount,
 cap)` RPC doing an atomic upsert-and-return before the route computes level/rank.
-- **`eas submit` fails** with a generic Play Store error; v4, v5 and v6 were all uploaded by
-  hand. Leading hypothesis: the closed track's real API id isn't `alpha`. To check, open the
-  Closed testing track in Play Console and read the track id out of the browser URL, then fix
-  `eas.json`'s submit config.
+- **`eas submit` fails** with a generic Play Store error; v4 through v7 were all uploaded by
+  hand. **The old "the track id isn't `alpha`" hypothesis is wrong and was disproved on
+  2026-10-16** — the track is Play's default closed track, whose API name is literally
+  `alpha`, and the number in the Play Console URL is an internal console id with no bearing
+  on the API. The actual cause is almost certainly that **no Google Play service account is
+  configured**: `eas.json`'s submit block has no `serviceAccountKeyPath`, and nothing has been
+  uploaded to EAS either, so `eas submit` has no way to authenticate to the publishing API.
+  Fix: Play Console → Developer account → API access (account level, owner only), create a
+  service account with release permissions, then `eas credentials` to upload its JSON. Keep
+  that JSON out of the repo — the pre-commit hook only looks for `eyJ...` and `sb_secret_`,
+  so it would not catch a Google service-account key.
 - **`SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` are scoped to both
   `production` and `preview`** on Vercel, with deployment protection off — so every branch
   push builds a publicly reachable deployment holding the production service-role key.
   `docs/PRODUCTION.md` says they should be production-only. Narrow them.
-- Categories can be created inline but never edited or deleted (FK is `on delete cascade`, so
-  deletion needs a UX decision, not a button).
+- Categories can now be renamed/restyled (`quests/categories/[id].tsx`) but still not
+  deleted: the FK is `on delete cascade`, so deleting one would silently take its activities
+  and their quest history. Needs a decision about where the activities go, not a button.
+- **Nothing in the schema stops two categories sharing a name.** Both the create form and the
+  edit screen guard in the client only. The real fix is a unique index on
+  `(user_id, lower(name))`, which is blocked: production already holds duplicate rows, so the
+  index cannot be created until they are merged, and there is no merge tool.
+- **A typed entry's origin is in-memory only.** A hand-typed number pays the `manual` rate for
+  the session it was typed in, but nothing persists _how_ progress reached its stored value,
+  so a reloaded part-done minutes or distance quest is treated as device-measured again.
+  Closing it needs the origin stored on `quests`, which means a migration.
 - `computeNewlyUnlockedTitles` reads every `xp_events` row per completion; also check the
   project's PostgREST `db-max-rows` (silent truncation past 1000).
 - `check_rate_limit` prunes `rate_limit_hits` globally rather than per-endpoint.

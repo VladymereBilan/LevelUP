@@ -182,6 +182,13 @@ to it are the live app itself, a migration deliberately pushed there, or a CLI s
 
 ## Current status and known gaps
 
+**Shipped: v7 (versionCode 7, version name 1.1.0), 2026-10-16**, to the Play Store Closed
+testing "Alpha" track, uploaded by hand. It carries everything in the two dated sections below
+and needed no database migration. versionCode is assigned by EAS, not by `app.json`:
+`eas.json` sets `appVersionSource: "remote"` with `autoIncrement` on the production profile,
+which is why no `versionCode` key exists in `app.json`, and why Profile reads the build number
+off the installed binary via `expo-application` rather than out of config.
+
 Shipped so far: auth, onboarding (username + starter template), the daily quest board, quest
 completion (progress, timer, checkbox, reps/sets), streaks/XP/stats/rank, activity management —
 creating categories/activities (`apps/mobile/lib/categories.ts`, `lib/activities.ts`, the
@@ -249,7 +256,7 @@ Shipped in v5 and v6 (2026-10-14/15), mostly performance and correctness:
   replacing a flat 35-day run wrapped into rows of seven under left/right labels that
   described an axis it didn't have.
 
-### Navigation: five tabs became three (2026-10-15)
+### Navigation: five tabs became three (2026-10-15, shipped in v7)
 
 Home, Stats, Profile. Not yet device-tested — see "Known gaps, mobile".
 
@@ -276,7 +283,7 @@ Home, Stats, Profile. Not yet device-tested — see "Known gaps, mobile".
   falling through to the previous tab, which is runtime behavior nothing here can verify
   without a device.
 
-### UI and copy fixes (2026-10-16)
+### UI and copy fixes (2026-10-16, shipped in v7)
 
 Reported from a device against v6, all fixed and covered by the Jest suite above.
 
@@ -306,6 +313,12 @@ Reported from a device against v6, all fixed and covered by the Jest suite above
     things that could move those numbers. It now takes a `ProgressOrigin`, and a typed number
     always earns the hand-logged `manual` rate however the activity is configured. See the
     residual gap in "Known gaps, mobile".
+  - Making those fields typeable put a keyboard in front of three screens that had never
+    raised one. They set `keyboardShouldPersistTaps="handled"` now (without it the first tap
+    on another control only dismisses the keyboard, so every field change past the first took
+    two taps) and `keyboardDismissMode="on-drag"`, and `app.json` pins
+    `softwareKeyboardLayoutMode: "resize"` so the Android behaviour is stated rather than
+    inherited from a default that could change.
 - **Health Connect steps sync, on the quest itself.** It was reachable only from Profile →
   Health Connect, which lists eligible quests and completes them outright — a path nobody
   would find from a steps quest they were looking at. `syncTodaySteps()`
