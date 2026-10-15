@@ -412,7 +412,11 @@ export default function QuestDetailScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 0, gap: 24, flexGrow: 1 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingTop: 0, gap: 24, flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {/* Above the progress card on purpose: a note is what the player wrote to read at
             this exact moment — the weights to lift, the chapter to open — so it comes before
             the numbers rather than buried under them. */}

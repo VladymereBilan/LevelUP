@@ -112,7 +112,11 @@ export default function NewActivityScreen() {
           <ActivityIndicator color={colors.violet} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 0, paddingBottom: 40 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 20, paddingTop: 0, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           <ActivityForm
             categories={categories}
             allowNewCategory
