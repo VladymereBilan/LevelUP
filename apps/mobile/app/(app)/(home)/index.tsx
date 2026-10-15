@@ -2,27 +2,35 @@ import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { calcQuestXp } from "@levelup/engine";
+import { calcQuestXp, xpToNext } from "@levelup/engine";
 import { Button } from "../../../components/Button";
 import { Icon } from "../../../components/Icon";
+import { LevelBadge } from "../../../components/LevelBadge";
 import { QuestCard } from "../../../components/QuestCard";
+import { RankChip } from "../../../components/RankChip";
 import { Skeleton, SkeletonCard } from "../../../components/Skeleton";
+import { StreakChip } from "../../../components/StreakChip";
+import { XpBar } from "../../../components/XpBar";
 import { ApiError } from "../../../lib/api";
 import { useSession } from "../../../lib/AuthProvider";
 import { invalidateBootstrapCache, loadBootstrap } from "../../../lib/bootstrap";
+import { bootMark } from "../../../lib/bootTrace";
 import {
   STARTER_TEMPLATE_OPTIONS,
   seedStarterTemplate,
   type StarterTemplateId,
 } from "../../../lib/onboarding";
+import type { ProfileSummary } from "../../../lib/profile";
 import { type QuestBoardItem } from "../../../lib/questBoard";
 import {
+  bestCaseSourceForMetric,
   formatProgressLabel,
   getCategoryIcon,
+  initials,
   progressPercent,
-  bestCaseSourceForMetric,
 } from "../../../lib/questFormat";
-import { useFocusLoad, type LoadMode } from "../../../lib/useFocusLoad";
+import type { StreakRow } from "../../../lib/streaks";
+import { useFocusLoad } from "../../../lib/useFocusLoad";
 import { colors, fontSizes, fonts } from "../../../theme/tokens";
 
 interface CategoryGroup {
@@ -48,31 +56,46 @@ function groupByCategory(items: QuestBoardItem[]): CategoryGroup[] {
   return [...groups.values()];
 }
 
-export default function QuestsScreen() {
+interface HomeData {
+  profile: ProfileSummary;
+  streak: StreakRow;
+  groups: CategoryGroup[];
+  hasAnyActivities: boolean;
+  equippedTitleName: string | null;
+}
+
+/**
+ * Home and a separate Quests tab rendered the same `loadBootstrap()` payload twice
+ * — Home to show "2 of 5 completed" and a button to the screen that drew the real
+ * board. The board is inline here instead, so the count and the thing it counted are
+ * the same pixels. Core stats aren't duplicated here either: the Stats tab's radar
+ * already plots all five values.
+ */
+export default function HomeScreen() {
   const { session } = useSession();
   const router = useRouter();
-  const [groups, setGroups] = useState<CategoryGroup[] | null>(null);
-  const [streakDays, setStreakDays] = useState(0);
-  const [hasAnyActivities, setHasAnyActivities] = useState(true);
+  const [data, setData] = useState<HomeData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [seedingTemplate, setSeedingTemplate] = useState<string | null>(null);
 
-  const load = useCallback(
-    async (_mode: LoadMode) => {
-      if (!session) return;
-      setError(null);
+  const load = useCallback(async () => {
+    if (!session) return;
 
-      try {
-        const { quests, streak, activityCount } = await loadBootstrap();
-        setGroups(groupByCategory(quests));
-        setStreakDays(streak.current);
-        setHasAnyActivities(activityCount > 0);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load quests.");
-      }
-    },
-    [session],
-  );
+    try {
+      const { profile, streak, quests, activityCount, titles } = await loadBootstrap();
+      setData({
+        profile,
+        streak,
+        groups: groupByCategory(quests),
+        hasAnyActivities: activityCount > 0,
+        equippedTitleName: titles.find((title) => title.id === profile.title_id)?.name ?? null,
+      });
+      setError(null);
+      bootMark("home data");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load your data.");
+    }
+  }, [session]);
 
   const { loading, refreshing, refresh } = useFocusLoad(load);
 
@@ -95,12 +118,36 @@ export default function QuestsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
-        <View style={{ padding: 20, gap: 20 }}>
+        {/* Shaped like the real screen below, so arriving data fills this in rather than
+            replacing a centred spinner with a whole layout at once. */}
+        <View style={{ padding: 20, gap: 24 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Skeleton width={43} height={43} radius={16} />
+            <View style={{ gap: 6, flex: 1 }}>
+              <Skeleton width={70} height={8} />
+              <Skeleton width={120} height={14} />
+            </View>
+            <Skeleton width={64} height={28} radius={14} />
+          </View>
+
+          <SkeletonCard height={166}>
+            <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
+              <Skeleton width={72} height={72} radius={20} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <Skeleton width={90} height={10} />
+                <Skeleton width="70%" height={16} />
+                <Skeleton height={8} radius={4} />
+                <Skeleton width={120} height={8} />
+              </View>
+            </View>
+          </SkeletonCard>
+
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Skeleton width={150} height={20} style={{ flex: 1 }} />
+            <Skeleton width={110} height={9} style={{ flex: 1 }} />
             <Skeleton width={34} height={34} radius={10} />
             <Skeleton width={34} height={34} radius={10} />
           </View>
+
           {/* Two groups of two, matching the category grouping the board renders — the
               header row with its progress bar, then the cards under it. */}
           {[0, 1].map((group) => (
@@ -128,6 +175,36 @@ export default function QuestsScreen() {
     );
   }
 
+  if (!data) {
+    return (
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+          gap: 16,
+        }}
+      >
+        <Text style={{ color: colors.danger, fontSize: fontSizes.body, textAlign: "center" }}>
+          {error ?? "Something went wrong."}
+        </Text>
+        <Button
+          variant="secondary"
+          icon="arrow"
+          loading={refreshing}
+          onPress={() => void refresh()}
+        >
+          Try again
+        </Button>
+      </SafeAreaView>
+    );
+  }
+
+  const { profile, streak, groups, hasAnyActivities, equippedTitleName } = data;
+  const xpMax = xpToNext(profile.level);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <ScrollView
@@ -140,22 +217,130 @@ export default function QuestsScreen() {
           />
         }
       >
+        <View className="mb-5 flex-row items-center justify-between">
+          <View className="flex-row items-center gap-2.5">
+            <View
+              className="h-[43px] w-[43px] items-center justify-center rounded-2xl"
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(167,139,250,0.35)",
+                backgroundColor: "#241a3f",
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.caption,
+                }}
+              >
+                {initials(profile.username)}
+              </Text>
+            </View>
+            <View className="gap-0.5">
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontSize: fontSizes.label,
+                  fontWeight: "700",
+                  letterSpacing: 1.3,
+                }}
+              >
+                WELCOME BACK
+              </Text>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.bodyLarge,
+                }}
+              >
+                {profile.username}
+              </Text>
+              {equippedTitleName ? (
+                <Text style={{ color: colors.violetLight, fontSize: fontSizes.label }}>
+                  {equippedTitleName}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+          <StreakChip days={streak.current} />
+        </View>
+
         <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: 16,
-          }}
+          className="min-h-[166px] flex-row items-center gap-4 overflow-hidden rounded-[23px] border p-5"
+          style={{ borderColor: "rgba(124,58,237,0.24)", backgroundColor: "rgba(27,27,47,0.9)" }}
         >
+          <LevelBadge level={profile.level} />
+          <View className="min-w-0 flex-1 gap-1.5">
+            <View className="flex-row items-center gap-1.5">
+              <RankChip rank={profile.rank} />
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontSize: fontSizes.label,
+                  fontWeight: "700",
+                  letterSpacing: 0.8,
+                }}
+              >
+                PLAYER RANK
+              </Text>
+            </View>
+            <Text
+              style={{
+                color: colors.text,
+                fontFamily: fonts.displaySemiBold,
+                fontSize: fontSizes.heading,
+              }}
+            >
+              Keep climbing.
+            </Text>
+            <View className="flex-row justify-between">
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.body,
+                }}
+              >
+                {profile.xp.toLocaleString()} / {xpMax.toLocaleString()} XP
+              </Text>
+              <Text
+                style={{
+                  color: colors.violetLight,
+                  fontFamily: fonts.displaySemiBold,
+                  fontSize: fontSizes.label,
+                }}
+              >
+                {Math.round((profile.xp / xpMax) * 100)}%
+              </Text>
+            </View>
+            <XpBar current={profile.xp} max={xpMax} />
+            <Text
+              style={{
+                color: colors.disabled,
+                fontSize: fontSizes.label,
+                fontWeight: "700",
+                letterSpacing: 0.6,
+              }}
+            >
+              {Math.max(0, xpMax - profile.xp).toLocaleString()} XP TO LEVEL{" "}
+              {String(profile.level + 1).padStart(2, "0")}
+            </Text>
+          </View>
+        </View>
+
+        <View className="mb-2.5 mt-6 flex-row items-center px-0.5">
           <Text
             style={{
               flex: 1,
-              color: colors.text,
-              fontFamily: fonts.displaySemiBold,
-              fontSize: fontSizes.title,
+              color: colors.muted,
+              fontSize: fontSizes.label,
+              fontWeight: "700",
+              letterSpacing: 1.4,
             }}
           >
-            Today&apos;s Quests
+            TODAY&apos;S QUESTS
           </Text>
           <Pressable
             onPress={() => router.push("/quests/activities")}
@@ -189,15 +374,8 @@ export default function QuestsScreen() {
           </Pressable>
         </View>
 
-        {error && !groups ? (
-          <View style={{ alignItems: "center", gap: 10, paddingVertical: 40 }}>
-            <Icon name="quest" size={28} color={colors.danger} />
-            <Text style={{ color: colors.danger, fontSize: fontSizes.body, textAlign: "center" }}>
-              {error}
-            </Text>
-          </View>
-        ) : !hasAnyActivities && (!groups || groups.length === 0) ? (
-          <View style={{ alignItems: "center", gap: 14, paddingVertical: 48 }}>
+        {!hasAnyActivities && groups.length === 0 ? (
+          <View style={{ alignItems: "center", gap: 14, paddingVertical: 36 }}>
             <View
               className="h-14 w-14 items-center justify-center rounded-2xl"
               style={{ backgroundColor: "rgba(124,58,237,0.14)" }}
@@ -253,8 +431,8 @@ export default function QuestsScreen() {
               </Button>
             </View>
           </View>
-        ) : !groups || groups.length === 0 ? (
-          <View style={{ alignItems: "center", gap: 10, paddingVertical: 60 }}>
+        ) : groups.length === 0 ? (
+          <View style={{ alignItems: "center", gap: 10, paddingVertical: 44 }}>
             <View
               className="h-14 w-14 items-center justify-center rounded-2xl"
               style={{ backgroundColor: "rgba(124,58,237,0.14)" }}
@@ -340,7 +518,7 @@ export default function QuestsScreen() {
                   const xp = calcQuestXp({
                     difficulty: item.difficulty,
                     source: bestCaseSourceForMetric(item.metricType),
-                    streakDays,
+                    streakDays: streak.current,
                   });
                   return (
                     <QuestCard
@@ -355,6 +533,7 @@ export default function QuestsScreen() {
                       xp={xp}
                       difficulty={item.difficulty}
                       icon={getCategoryIcon(item.categoryIcon)}
+                      tint={item.categoryColor}
                       complete={item.status === "completed"}
                       onPress={() => router.push(`/quests/${item.questId}`)}
                     />

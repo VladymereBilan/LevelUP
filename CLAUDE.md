@@ -185,12 +185,12 @@ to it are the live app itself, a migration deliberately pushed there, or a CLI s
 Shipped so far: auth, onboarding (username + starter template), the daily quest board, quest
 completion (progress, timer, checkbox, reps/sets), streaks/XP/stats/rank, activity management —
 creating categories/activities (`apps/mobile/lib/categories.ts`, `lib/activities.ts`, the
-`ActivityForm` component), editing and archiving an activity (`app/(app)/quests/activities/`),
-and reaching a starter template from the Quests tab's zero-activities empty state, not just
+`ActivityForm` component), editing and archiving an activity (`app/(app)/(home)/quests/activities/`),
+and reaching a starter template from Home's zero-activities empty state, not just
 onboarding — and the Stats tab (weekly XP bar chart, 5-stat radar chart, streak heatmap,
 titles-unlocked row; `apps/mobile/lib/statsProgress.ts`, `lib/titles.ts`,
-`components/{BarChart,RadarChart,Heatmap}.tsx`) and the Challenges tab
-(`apps/mobile/lib/challenges.ts`, `app/(app)/challenges.tsx`), backed by a new
+`components/{BarChart,RadarChart,Heatmap}.tsx`) and Challenges, now a Stats segment
+(`apps/mobile/lib/challenges.ts`, `components/ChallengesPanel.tsx`), backed by a new
 `GET /api/challenges` that computes each caller's own progress live rather than reading a
 persisted value (see that route's own comment for why) — and title awarding: titles unlock
 automatically inside `complete_quest()`'s transaction (which titles to award is computed by
@@ -243,15 +243,123 @@ Shipped in v5 and v6 (2026-10-14/15), mostly performance and correctness:
 - **Bottom sheets** no longer lock the app on dismiss — two effects in `BottomSheet.tsx` were
   cancelling each other's close animation, so the modal never unmounted and its backdrop
   covered a dead screen. It was reachable from the XP figure on every quest detail screen.
-- **Activity notes** (500 chars) and **creation-order** quests within a category; the Quests
-  tab shows per-category progress, so a category reads as the routine it is being used as.
+- **Activity notes** (500 chars) and **creation-order** quests within a category; the board
+  shows per-category progress, so a category reads as the routine it is being used as.
 - **The streak calendar** is week-aligned (7 weekday rows x 5 week columns) with a legend,
   replacing a flat 35-day run wrapped into rows of seven under left/right labels that
   described an axis it didn't have.
 
+### Navigation: five tabs became three (2026-10-15)
+
+Home, Stats, Profile. Not yet device-tested — see "Known gaps, mobile".
+
+- **Home absorbed the Quests tab.** Both screens rendered the same `loadBootstrap()` payload:
+  Home to draw "2 of 5 completed" and a button to the screen that drew the actual board. Home
+  renders the board inline now, so the count and the thing it counts are the same pixels. The
+  `CORE STATS` block of five `StatBar`s came off Home as well — the Stats tab's radar already
+  plots all five values, and the duplication was invisible only because the two lived a tab
+  apart.
+- **Challenges became a segment of Stats**, via `components/SegmentedControl.tsx` (Progress /
+  Challenges) and `components/ChallengesPanel.tsx`. The panel isn't mounted until its segment
+  is first selected, so `GET /api/challenges` stays off the request path of an ordinary Stats
+  visit; past that it keeps a module-scoped cache, because unmounting on every toggle would
+  otherwise re-flash a full-screen spinner where the old always-mounted tab revalidated
+  silently. The segmented control sits above the loading gate, so it stays switchable while
+  Stats' own data is still in flight.
+- **Route URLs are unchanged.** Home and the quest/activity screens share one stack under the
+  `(home)` group — `app/(app)/(home)/` — which keeps back-navigation landing on the board that
+  opened a detail screen, with the tab bar visible throughout. `(home)` is a group, so
+  `/quests/[id]` and `/quests/activities/...` still resolve exactly as before; nothing
+  deep-links to the two removed routes (`/quests`, `/challenges`), and notifications carry no
+  paths at all. The alternative — leaving the screens in place and hiding the tabs with
+  `href: null` — was rejected because back-navigation would then depend on an empty stack
+  falling through to the previous tab, which is runtime behavior nothing here can verify
+  without a device.
+
+### UI and copy fixes (2026-10-16)
+
+Reported from a device against v6, all fixed and covered by the Jest suite above.
+
+- **The streak calendar filled about a third of its card.** `Heatmap` drew a hardcoded 14pt
+  square, so the grid was a small block hugging the left edge. Cells are now sized from the
+  measured container (`heatmapCellSize`, exported so the arithmetic is assertable), and the
+  window widened from 5 weeks to 13 so a quarter of history fills the width at a sane square
+  size. Note the floor is a _fallback for an unmeasured container_, not a minimum: enforcing a
+  minimum is exactly what would make a wide grid overflow instead of shrink.
+- **"Weekdays" accepted Saturday and Sunday.** The stored `Schedule["kind"]` of `"weekdays"`
+  means "these chosen days of the week", and the form surfaced that value directly under a
+  label that reads as Monday to Friday. `lib/schedulePresets.ts` adds a presentation layer:
+  Daily / Weekdays / Weekends / Pick days / One-time, where the three day-of-week presets all
+  still persist as `kind: "weekdays"` and differ only in which days they fill in. No
+  migration, and `generate_daily_quests()` matches on the same day numbers as before.
+- **Numbers can be typed, in both places they are entered.**
+  - _Targets_ (`components/Stepper.tsx`, the Add/Edit Activity form). The stepper was +/- only,
+    on the reasoning that a form should never need the system keyboard. That holds for a nudge
+    and fails for a target: 10,000 steps at 500 a tap is twenty taps. The value is a
+    `TextInput` now, with the buttons kept for small adjustments. Clamping happens on **blur,
+    not per keystroke** (`commitStepperText`) — a steps field has a 500 minimum, so clamping
+    each character would rewrite "5" to "500" before "5000" could ever be typed; and while the
+    field has focus it shows the raw draft, so a half-finished "1." is not fought.
+  - _Progress_ (the quest detail screen) for minutes, reps, sets, distance (in km) and steps,
+    not only tapped or timed. This had to touch the XP source rule: `sourceForCompletion` justified
+    reading progress as evidence of effort _because_ the timer and the GPS tracker were the only
+    things that could move those numbers. It now takes a `ProgressOrigin`, and a typed number
+    always earns the hand-logged `manual` rate however the activity is configured. See the
+    residual gap in "Known gaps, mobile".
+- **Health Connect steps sync, on the quest itself.** It was reachable only from Profile →
+  Health Connect, which lists eligible quests and completes them outright — a path nobody
+  would find from a steps quest they were looking at. `syncTodaySteps()`
+  (`lib/healthConnect.ts`) now backs a Sync button on the quest detail screen, returning a
+  discriminated result so "no Health Connect on this device", "permission refused" and "it
+  broke" each get their own words rather than one generic error. Today's total **replaces**
+  progress rather than adding to it: Health Connect reports a running count for the day, so
+  adding would double-count every earlier sync.
+
+  Two consequences worth knowing. `bestCaseSourceForMetric("steps")` returns `health` now
+  instead of `manual`, so a steps quest previews at the full tracked rate — the engine already
+  allowed it (`SOURCES_BY_METRIC_TYPE.steps` is `["manual", "health"]`), only the app never
+  claimed it. And that promotion opened a hole which is closed in the same change: the +/-
+  stepper now sets `ProgressOrigin` to `"typed"`, because tapping +100 twenty times is a
+  self-report and would otherwise have claimed the health multiplier. Before steps had a bonus
+  source, every stepper-driven metric was `manual` anyway and nothing turned on it.
+
+- **A new category's colour had no effect.** `QuestBoardItem.categoryColor` was fetched and
+  then dropped: `QuestCard` tinted every quest the same violet, so the colour a user picked
+  only ever appeared in the picker they picked it in. The card takes a `tint` now (icon,
+  icon well and spine).
+- **Em dashes removed from player-facing copy**, mobile and the web legal pages. Code comments
+  and these docs keep theirs deliberately. Guarded by `apps/mobile/lib/copy.test.ts` and
+  `apps/web/app/copy.test.ts`, which scan source with comments blanked out.
+- **Activities can be deleted permanently, but only when unused.** `quests.activity_id` is
+  `on delete cascade`, so deleting an activity with history would retroactively shrink the
+  streak calendar, the challenge counts and the lifetime "quests done" total, all of which are
+  computed from the `quests` table (XP and level are safe, being columns on `profiles`).
+  `removalFor` offers delete at zero completed quests and archive otherwise; `deleteActivity`
+  re-checks server-side, since the list the button was drawn from may be stale. Worth saying
+  plainly: **archiving already solves the database-growth worry** an unbounded activity list
+  suggests. Archived activities are excluded from `generate_daily_quests()`, so they stop
+  producing rows; growth comes from `quests`, not from the activity list.
+
 Known gaps, mobile:
 
-- `apps/mobile/app/(app)/quests/[id].tsx`: `item.progress` is set into `localProgress` once on
+- **The three-tab navigation has not been tested on a device.** `pnpm typecheck`/`lint`/`test`
+  and `expo export` all pass, and every `router.push` target was checked against the route
+  tree by hand — but typed routes are _not_ enabled (`app.json` has no
+  `experiments.typedRoutes`), so route strings are plain strings that no compiler validates,
+  and `expo export` proves the bundle builds, not that the router resolves. What specifically
+  wants a device: pushing a quest detail and a `/quests/activities` screen from Home and
+  backing out of each; the Stats segmented control in both directions; and a cold start
+  landing on `/`. Enabling typed routes would make the first of those a compile-time check and
+  is worth doing before the next navigation change.
+- **A typed entry's origin is in-memory only.** `ProgressOrigin` makes a hand-typed number
+  pay the `manual` rate for the session it was typed in, but nothing persists _how_ progress
+  got to its stored value. Leave a part-done minutes or distance quest and come back, and the
+  reloaded progress is treated as device-measured again. Closing it properly needs the origin
+  stored alongside the progress, which means a `quests` column and a migration; it is a
+  widening of the already-documented "whether a timer genuinely ran is not verifiable"
+  gap below, not a new class of problem, and it buys nothing from anyone in a single-player
+  self-report app.
+- `apps/mobile/app/(app)/(home)/quests/[id].tsx`: `item.progress` is set into `localProgress` once on
   load and never kept in sync with it afterward. Currently harmless — nothing reads the stale
   `item.progress` value again after that first read — but worth fixing properly (or removing
   the now-pointless field) if this screen is touched again.
@@ -259,15 +367,22 @@ Known gaps, mobile:
   the app yet — only activities have an edit/archive screen. A category with activities still
   pointing at it can't be deleted anyway (FK is `on delete cascade`, which would silently take
   the activities with it), so category deletion needs its own UX decision, not just a button.
-- `apps/mobile` now has Vitest (`vitest.config.ts`, `lib/**/*.test.ts`, no DB or network —
-  `lib/api` is mocked, because importing it reaches `lib/supabase`, which reads
-  `EXPO_PUBLIC_*` at module scope and registers an AppState listener). Coverage is
-  deliberately narrow: `lib/bootstrap.ts` (cache, dedupe, invalidation, the signup retry) and
-  `lib/questFormat.ts` (which source a completion may claim). Everything else — every screen,
-  every component, `lib/statsProgress.ts`, `lib/notifications.ts` — is still covered only by
-  `pnpm typecheck`/`pnpm lint`/`expo export` and manual device testing. There is no React
-  renderer here, so anything that renders or touches a native module is out of scope until one
-  is added.
+- `apps/mobile` runs on **Jest (`jest-expo`), not Vitest** — see `jest.config.js` and
+  `test/setup.ts`. It moved off Vitest when component rendering was added: React Native ships
+  Flow-typed source that esbuild cannot parse, and `@testing-library/react-native` is CJS, so
+  its `require("react-native")` bypasses a bundler's transform pipeline entirely and reaches
+  Node raw. Rendering needs Babel _in the module loader_, which is what Jest's transform is
+  and what no Vitest plugin can substitute for. The rest of the monorepo is still Vitest.
+  Two gotchas that cost time: RNTL 14's `render`, `rerender` and `fireEvent` are **async**
+  (React 19 concurrent) — a missing `await` on `fireEvent` leaves overlapping `act()` scopes
+  and corrupts every later test in the file rather than failing its own; and `screen` and
+  `render` must come from the same import, since the package resolves to both `src` and
+  `dist` under pnpm's hoisting.
+  Coverage: `lib/bootstrap.ts`, `lib/questFormat.ts` (including which source a typed entry
+  may claim), `lib/schedulePresets.ts`, `lib/activities.ts`'s delete rule, a repo scan for em
+  dashes in player-facing copy, and real render tests for `Heatmap`, `QuestCard` and
+  `ActivityForm`'s schedule picker. Still untested: `lib/statsProgress.ts`,
+  `lib/notifications.ts`, and every screen component.
 
 Known gaps, backend/game-rules:
 

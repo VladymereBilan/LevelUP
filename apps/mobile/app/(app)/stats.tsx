@@ -2,11 +2,13 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BarChart } from "../../components/BarChart";
+import { ChallengesPanel } from "../../components/ChallengesPanel";
 import { Heatmap } from "../../components/Heatmap";
 import { Icon } from "../../components/Icon";
 import { Button } from "../../components/Button";
 import { RadarChart } from "../../components/RadarChart";
 import { RankChip } from "../../components/RankChip";
+import { SegmentedControl } from "../../components/SegmentedControl";
 import { StreakChip } from "../../components/StreakChip";
 import { TitleDetailModal } from "../../components/TitleDetailModal";
 import { ApiError } from "../../lib/api";
@@ -37,8 +39,16 @@ interface StatsData {
   titles: TitleDisplay[];
 }
 
+type Segment = "progress" | "challenges";
+
+const SEGMENTS = [
+  { value: "progress", label: "Progress" },
+  { value: "challenges", label: "Challenges" },
+] as const satisfies readonly { value: Segment; label: string }[];
+
 export default function StatsScreen() {
   const { session } = useSession();
+  const [segment, setSegment] = useState<Segment>("progress");
   const [data, setData] = useState<StatsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedTitle, setSelectedTitle] = useState<TitleDisplay | null>(null);
@@ -95,44 +105,68 @@ export default function StatsScreen() {
     }
   }
 
-  if (loading) {
-    return (
-      <SafeAreaView
+  // Rendered above every branch below, including the spinner, so the segment stays
+  // switchable while this tab's own data is still in flight.
+  const header = (
+    <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14, gap: 14 }}>
+      <Text
         style={{
-          flex: 1,
-          backgroundColor: colors.background,
-          alignItems: "center",
-          justifyContent: "center",
+          color: colors.text,
+          fontFamily: fonts.displaySemiBold,
+          fontSize: fontSizes.title,
         }}
       >
-        <ActivityIndicator color={colors.violet} />
+        Stats &amp; Progress
+      </Text>
+      <SegmentedControl options={SEGMENTS} value={segment} onChange={setSegment} />
+    </View>
+  );
+
+  if (segment === "challenges") {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+        {header}
+        <ChallengesPanel />
+      </SafeAreaView>
+    );
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+        {header}
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color={colors.violet} />
+        </View>
       </SafeAreaView>
     );
   }
 
   if (!data) {
     return (
-      <SafeAreaView
-        style={{
-          flex: 1,
-          backgroundColor: colors.background,
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-          gap: 16,
-        }}
-      >
-        <Text style={{ color: colors.danger, fontSize: 14, textAlign: "center" }}>
-          {error ?? "Something went wrong."}
-        </Text>
-        <Button
-          variant="secondary"
-          icon="arrow"
-          loading={refreshing}
-          onPress={() => void refresh()}
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+        {header}
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            gap: 16,
+          }}
         >
-          Try again
-        </Button>
+          <Text style={{ color: colors.danger, fontSize: fontSizes.body, textAlign: "center" }}>
+            {error ?? "Something went wrong."}
+          </Text>
+          <Button
+            variant="secondary"
+            icon="arrow"
+            loading={refreshing}
+            onPress={() => void refresh()}
+          >
+            Try again
+          </Button>
+        </View>
       </SafeAreaView>
     );
   }
@@ -149,8 +183,9 @@ export default function StatsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+      {header}
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 36, gap: 18 }}
+        contentContainerStyle={{ padding: 20, paddingTop: 4, paddingBottom: 36, gap: 18 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -159,16 +194,6 @@ export default function StatsScreen() {
           />
         }
       >
-        <Text
-          style={{
-            color: colors.text,
-            fontFamily: fonts.displaySemiBold,
-            fontSize: fontSizes.title,
-          }}
-        >
-          Stats &amp; Progress
-        </Text>
-
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View
             style={{

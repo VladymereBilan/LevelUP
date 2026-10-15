@@ -3,28 +3,37 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import type { Schedule } from "@levelup/engine";
-import { Chip } from "../../../../components/Chip";
-import { Icon } from "../../../../components/Icon";
+import { SCHEDULE_PRESET_SUMMARIES, presetForSchedule } from "../../../../../lib/schedulePresets";
+import { BottomSheet } from "../../../../../components/BottomSheet";
+import { Button } from "../../../../../components/Button";
+import { Chip } from "../../../../../components/Chip";
+import { Icon } from "../../../../../components/Icon";
 import {
+  countCompletedQuests,
+  deleteActivity,
   listMyActivities,
+  removalFor,
   setActivityArchived,
   type ActivityRow,
-} from "../../../../lib/activities";
-import { useSession } from "../../../../lib/AuthProvider";
-import { listMyCategories, type CategoryRow } from "../../../../lib/categories";
-import { invalidateBootstrapCache } from "../../../../lib/bootstrap";
-import { getCategoryIcon } from "../../../../lib/questFormat";
-import { useFocusLoad, type LoadMode } from "../../../../lib/useFocusLoad";
-import { colors, fontSizes, fonts } from "../../../../theme/tokens";
+} from "../../../../../lib/activities";
+import { useSession } from "../../../../../lib/AuthProvider";
+import { listMyCategories, type CategoryRow } from "../../../../../lib/categories";
+import { invalidateBootstrapCache } from "../../../../../lib/bootstrap";
+import { getCategoryIcon } from "../../../../../lib/questFormat";
+import { useFocusLoad, type LoadMode } from "../../../../../lib/useFocusLoad";
+import { colors, fontSizes, fonts } from "../../../../../theme/tokens";
 
 const WEEKDAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+/** Named the same way the form named it, so an activity set up as "Weekends" doesn't read
+ * back as "Sun, Sat" here. Only a genuinely custom set is spelled out day by day. */
 function scheduleSummary(schedule: Schedule): string {
-  if (schedule.kind === "daily") return "Daily";
-  if (schedule.kind === "weekdays") {
-    return (schedule.weekdays ?? []).map((d) => WEEKDAY_ABBR[d]).join(", ") || "Weekdays";
+  const preset = presetForSchedule(schedule);
+  if (preset === "custom") {
+    return (schedule.weekdays ?? []).map((d) => WEEKDAY_ABBR[d]).join(", ") || "No days";
   }
-  return `One-time: ${schedule.date ?? "?"}`;
+  if (preset === "one_off") return `One-time: ${schedule.date ?? "?"}`;
+  return SCHEDULE_PRESET_SUMMARIES[preset];
 }
 
 export default function ManageActivitiesScreen() {
@@ -35,6 +44,8 @@ export default function ManageActivitiesScreen() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<ActivityRow | null>(null);
+  const [confirmNotice, setConfirmNotice] = useState<string | null>(null);
 
   const load = useCallback(
     async (_mode: LoadMode) => {
@@ -65,6 +76,49 @@ export default function ManageActivitiesScreen() {
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update activity.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  /**
+   * Checked here rather than from the list, because the row only knows what the activity is,
+   * not what it has been used for. An activity with completed quests can only be archived:
+   * quests cascade on delete, so removing it would retroactively shrink the streak calendar,
+   * the challenge counts and the lifetime total.
+   */
+  async function askToDelete(activity: ActivityRow) {
+    setPendingId(activity.id);
+    setError(null);
+    try {
+      const removal = removalFor(await countCompletedQuests(activity.id));
+      if (removal.kind === "delete") {
+        setConfirmNotice(null);
+      } else {
+        setConfirmNotice(
+          `${activity.name} has ${removal.completedQuests} completed quest${
+            removal.completedQuests === 1 ? "" : "s"
+          }. Deleting it would remove them from your stats, so it can only be archived.`,
+        );
+      }
+      setConfirming(activity);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to check that activity.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function handleDelete(activity: ActivityRow) {
+    setPendingId(activity.id);
+    try {
+      await deleteActivity(activity.id);
+      invalidateBootstrapCache();
+      setConfirming(null);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete activity.");
+      setConfirming(null);
     } finally {
       setPendingId(null);
     }
@@ -214,6 +268,7 @@ export default function ManageActivitiesScreen() {
                   </Pressable>
                 ) : null}
                 <Pressable
+                  testID={`archive-${activity.id}`}
                   onPress={() => void handleToggleArchived(activity)}
                   disabled={pendingId === activity.id}
                   style={{
@@ -237,11 +292,75 @@ export default function ManageActivitiesScreen() {
                     />
                   </View>
                 </Pressable>
+                <Pressable
+                  testID={`delete-${activity.id}`}
+                  onPress={() => void askToDelete(activity)}
+                  disabled={pendingId === activity.id}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginLeft: 8,
+                    opacity: pendingId === activity.id ? 0.5 : 1,
+                  }}
+                >
+                  <Icon name="trash" size={15} color={colors.danger} />
+                </Pressable>
               </View>
             );
           })}
         </ScrollView>
       )}
+
+      <BottomSheet visible={confirming !== null} onClose={() => setConfirming(null)}>
+        <View style={{ gap: 14 }}>
+          <Text
+            style={{
+              color: colors.text,
+              fontFamily: fonts.displaySemiBold,
+              fontSize: fontSizes.bodyLarge,
+            }}
+          >
+            {confirmNotice ? "Archive this activity?" : "Delete this activity?"}
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: fontSizes.body, lineHeight: 20 }}>
+            {confirmNotice ??
+              `${confirming?.name ?? "This activity"} has never been completed, so deleting it removes nothing from your stats. This cannot be undone.`}
+          </Text>
+          {confirmNotice ? (
+            <Button
+              testID="confirm-archive"
+              variant="secondary"
+              icon="minus"
+              loading={pendingId === confirming?.id}
+              onPress={() => {
+                const activity = confirming;
+                setConfirming(null);
+                if (activity && !activity.archived) void handleToggleArchived(activity);
+              }}
+            >
+              Archive instead
+            </Button>
+          ) : (
+            <Button
+              testID="confirm-delete"
+              variant="danger"
+              icon="trash"
+              loading={pendingId === confirming?.id}
+              onPress={() => confirming && void handleDelete(confirming)}
+            >
+              Delete permanently
+            </Button>
+          )}
+          <Button variant="ghost" onPress={() => setConfirming(null)}>
+            Cancel
+          </Button>
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }

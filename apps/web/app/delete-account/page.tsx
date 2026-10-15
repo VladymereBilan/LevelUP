@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Delete Your Account — LEVEL UP",
+  title: "Delete Your Account | LEVEL UP",
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -26,7 +26,7 @@ export default function DeleteAccountPage() {
       <Section title="Delete in the app">
         <p>
           Open LEVEL UP and go to the Profile tab. Scroll to the Danger Zone section at the bottom,
-          and tap &quot;Delete my account&quot;. You&apos;ll be asked to type DELETE to confirm —
+          and tap &quot;Delete my account&quot;. You&apos;ll be asked to type DELETE to confirm,
           this is permanent and cannot be undone.
         </p>
       </Section>
@@ -47,7 +47,7 @@ export default function DeleteAccountPage() {
           Deleting your account removes your auth record and every row tied to it: your profile,
           level/XP/rank, stats, streaks, categories, activities, quests, the XP ledger, unlocked
           titles, and challenge progress. Nothing is kept in a &quot;soft-deleted&quot; state in the
-          live database — the delete is immediate and the underlying database cascade removes all of
+          live database. The delete is immediate, and the underlying database cascade removes all of
           it in the same operation.
         </p>
       </Section>
@@ -57,9 +57,9 @@ export default function DeleteAccountPage() {
           We take a weekly encrypted database backup for disaster recovery, retained for 90 days. If
           your account was included in a backup taken before you deleted it, your data persists in
           that backup artifact only until it&apos;s overwritten by the next week&apos;s backup or
-          ages out of the 90-day retention window — whichever comes first. Backups are never
-          restored into the live product except for disaster recovery, and are not used to recreate
-          a deleted account.
+          ages out of the 90-day retention window, whichever comes first. Backups are never restored
+          into the live product except for disaster recovery, and are not used to recreate a deleted
+          account.
         </p>
       </Section>
 

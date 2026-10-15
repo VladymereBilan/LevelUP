@@ -166,8 +166,9 @@ export function XpBreakdownSheet({ visible, onClose, breakdown }: XpBreakdownShe
             );
           })}
           <Text style={{ color: colors.disabled, fontSize: fontSizes.label, lineHeight: 15 }}>
-            Timed quests use the built-in timer. Runs track by GPS, and steps can sync from Health
-            Connect — both count as auto-tracked.
+            Timed quests use the built-in timer, distance tracks by GPS, and steps sync from Health
+            Connect. Those count as auto-tracked. Anything you enter by hand, including the +/-
+            buttons, pays the manual rate.
           </Text>
         </View>
 

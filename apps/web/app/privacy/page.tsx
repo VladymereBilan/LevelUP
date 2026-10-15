@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — LEVEL UP",
+  title: "Privacy Policy | LEVEL UP",
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
         <p>
           When you sign up, we store your email address (via Supabase Auth), a username you choose,
           and your device&apos;s timezone. If you sign in with Google, we receive your Google
-          account&apos;s email and basic profile info from Google&apos;s sign-in flow — we never see
+          account&apos;s email and basic profile info from Google&apos;s sign-in flow. We never see
           or store your Google password.
         </p>
       </Section>
@@ -42,7 +42,7 @@ export default function PrivacyPolicyPage() {
         <p>
           Your level, XP, rank, stats, streaks, and the categories/activities/quests you create are
           stored so your progress persists across devices. XP and level changes are computed and
-          written only by our server — the app itself never has permission to set these values
+          written only by our server. The app itself never has permission to set these values
           directly.
         </p>
       </Section>
@@ -50,7 +50,7 @@ export default function PrivacyPolicyPage() {
       <Section title="Health data (Health Connect)">
         <p>
           If you connect Android Health Connect, the app reads your step counts and exercise session
-          times — read-only, and only while the app is open. Raw health records never leave your
+          times, read-only, and only while the app is open. Raw health records never leave your
           device: we send our server only the computed progress number for a specific quest (e.g.
           &quot;4,312 steps&quot; or &quot;32 minutes&quot;), not the underlying records themselves.
         </p>
@@ -60,7 +60,7 @@ export default function PrivacyPolicyPage() {
         <p>
           If you use a distance-based quest&apos;s run tracking, the app uses your device&apos;s GPS
           location in the foreground, only while a run is actively being tracked, to compute
-          distance traveled. Raw GPS coordinates are never stored or transmitted — only the final
+          distance traveled. Raw GPS coordinates are never stored or transmitted. Only the final
           computed distance for that run is sent to our server as quest progress.
         </p>
       </Section>
@@ -68,7 +68,7 @@ export default function PrivacyPolicyPage() {
       <Section title="What we don't do">
         <p>
           We don&apos;t sell your data. We don&apos;t share health or location data with third-party
-          advertisers or data brokers. We don&apos;t run background location tracking — location is
+          advertisers or data brokers. We don&apos;t run background location tracking. Location is
           only ever read while the app is open and a run is active.
         </p>
       </Section>

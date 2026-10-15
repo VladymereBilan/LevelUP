@@ -2,6 +2,7 @@
   "extends": ["../../tsconfig.base.json", "expo/tsconfig.base"],
   "compilerOptions": {
     "strict": true,
+    "types": ["jest", "node"],
     "paths": {
       "@levelup/engine": ["../../packages/engine/src/index.ts"]
     }

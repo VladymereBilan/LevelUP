@@ -28,7 +28,7 @@ const TEMPLATE_OPTIONS: TemplateOption[] = [
   {
     id: null,
     name: "Start from scratch",
-    description: "No preset quests — build your own.",
+    description: "No preset quests. Build your own.",
     icon: "plus",
   },
 ];

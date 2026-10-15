@@ -2,16 +2,16 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityForm, type ActivityFormValues } from "../../../../components/ActivityForm";
-import { Icon } from "../../../../components/Icon";
-import { ApiError } from "../../../../lib/api";
-import { getActivity, updateActivity, type ActivityRow } from "../../../../lib/activities";
-import { useSession } from "../../../../lib/AuthProvider";
-import { listMyCategories, type CategoryRow } from "../../../../lib/categories";
-import { invalidateBootstrapCache } from "../../../../lib/bootstrap";
-import { getMyStreak } from "../../../../lib/streaks";
-import { useFocusLoad } from "../../../../lib/useFocusLoad";
-import { colors, fontSizes, fonts } from "../../../../theme/tokens";
+import { ActivityForm, type ActivityFormValues } from "../../../../../components/ActivityForm";
+import { Icon } from "../../../../../components/Icon";
+import { ApiError } from "../../../../../lib/api";
+import { getActivity, updateActivity, type ActivityRow } from "../../../../../lib/activities";
+import { useSession } from "../../../../../lib/AuthProvider";
+import { listMyCategories, type CategoryRow } from "../../../../../lib/categories";
+import { invalidateBootstrapCache } from "../../../../../lib/bootstrap";
+import { getMyStreak } from "../../../../../lib/streaks";
+import { useFocusLoad } from "../../../../../lib/useFocusLoad";
+import { colors, fontSizes, fonts } from "../../../../../theme/tokens";
 
 export default function EditActivityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

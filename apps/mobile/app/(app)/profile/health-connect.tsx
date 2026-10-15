@@ -127,7 +127,7 @@ export default function HealthConnectScreen() {
           <View style={{ gap: 12 }}>
             <Text style={{ color: colors.muted, fontSize: fontSizes.body, lineHeight: 20 }}>
               Connect Health Connect to sync steps and exercise sessions into matching quests. Only
-              step counts and exercise session times are read — nothing is written back to Health
+              step counts and exercise session times are read. Nothing is written back to Health
               Connect.
             </Text>
             <Button icon="dumbbell" onPress={() => void connect()}>

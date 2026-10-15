@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { DeleteAccountSheet } from "../../../components/DeleteAccountSheet";
@@ -638,7 +639,7 @@ export default function ProfileScreen() {
             letterSpacing: 1,
           }}
         >
-          LEVEL UP · VERSION 1.0.0
+          {`LEVEL UP · VERSION ${Constants.expoConfig?.version ?? "dev"}`}
         </Text>
       </ScrollView>
 

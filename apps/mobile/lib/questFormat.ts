@@ -13,6 +13,22 @@ export function initials(username: string): string {
 }
 
 /**
+ * How the progress on screen got there.
+ *
+ * "device" means a measurement moved it: the timer, the GPS tracker, or a Health Connect
+ * sync. Those are the only cases that can earn a verified-effort multiplier.
+ *
+ * "typed" means the player entered the number themselves, and covers the +/- stepper as much
+ * as the keyboard — tapping +100 twenty times is a self-report, not a measurement. That
+ * distinction only started to matter when steps gained a `health` best case: before it, every
+ * stepper-driven metric was `manual` anyway and nothing turned on it.
+ *
+ * Sticky for the session: once a number has been hand-edited there is no honest way to tell
+ * which part of it was measured.
+ */
+export type ProgressOrigin = "device" | "typed";
+
+/**
  * The best source a quest of this metric type could earn — what it is worth when done the
  * way it is meant to be done. For the XP figure on a quest card and on the activity form,
  * where the point is what the work is worth, not what any particular completion claimed.
@@ -20,7 +36,7 @@ export function initials(username: string): string {
  * Never use this to complete a quest: see sourceForCompletion.
  */
 export function bestCaseSourceForMetric(metricType: MetricType): QuestSource {
-  if (metricType === "distance") return "health";
+  if (metricType === "distance" || metricType === "steps") return "health";
   if (metricType === "minutes") return "timer";
   return "manual";
 }
@@ -45,12 +61,20 @@ export function bestCaseSourceForMetric(metricType: MetricType): QuestSource {
  * Short of the target earns "manual": a bonus for verified effort should require the effort,
  * not the intention. Metrics whose best case is already "manual" — checkbox, reps, sets,
  * steps — are unaffected either way, so this only moves the two cases that were exploitable.
+ *
+ * `origin` is what keeps that true now that every metric can also be typed in by hand. The
+ * reasoning above rests on progress being the evidence, which in turn rested on the timer
+ * and the GPS tracker being the only things that could move those two numbers. A typed
+ * number is a self-report whatever the metric is configured as, so it always earns the
+ * hand-logged rate — which is exactly what the multipliers are for.
  */
 export function sourceForCompletion(
   metricType: MetricType,
   progress: number,
   target: ActivityTarget,
+  origin: ProgressOrigin = "device",
 ): QuestSource {
+  if (origin === "typed") return "manual";
   return meetsTarget(metricType, progress, target) ? bestCaseSourceForMetric(metricType) : "manual";
 }
 
@@ -184,3 +208,50 @@ export const CATEGORY_COLOR_OPTIONS: readonly string[] = [
   "#FBBF24",
   "#F87171",
 ];
+
+/** The unit a typed entry is expressed in, which is not always the unit progress is stored
+ * in: distance is kept in metres and entered in kilometres. */
+export const TYPED_ENTRY_UNITS: Record<MetricType, string> = {
+  checkbox: "",
+  minutes: "minutes",
+  reps: "reps",
+  sets_reps_weight: "sets",
+  distance: "km",
+  steps: "steps",
+};
+
+/** Ceiling on a hand-entered number. Not a game rule — the engine's activityTargets caps what
+ * a quest can ask for — just a guard so a stray keypress can't store an absurd figure. */
+const MAX_TYPED_PROGRESS: Record<MetricType, number> = {
+  checkbox: 1,
+  minutes: 1440,
+  reps: 10_000,
+  sets_reps_weight: 1_000,
+  distance: 1_000_000,
+  steps: 500_000,
+};
+
+/**
+ * Reads what the player typed into the progress it represents, or null if it isn't a number
+ * yet — a half-typed "1." has to leave the field alone rather than reset it to zero.
+ */
+export function parseTypedProgress(metricType: MetricType, text: string): number | null {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return 0;
+  if (!/^\d*\.?\d*$/.test(trimmed)) return null;
+
+  const value = Number(trimmed);
+  if (!Number.isFinite(value) || value < 0) return null;
+
+  // Entered in kilometres, stored in metres, and rounded because a metre is the smallest
+  // unit anything downstream counts in.
+  const scaled = metricType === "distance" ? Math.round(value * 1000) : Math.floor(value);
+  return Math.min(scaled, MAX_TYPED_PROGRESS[metricType]);
+}
+
+/** Stored progress, in the unit the typed field shows it in. */
+export function typedEntryValue(metricType: MetricType, progress: number): string {
+  if (progress <= 0) return "";
+  if (metricType === "distance") return String(Number((progress / 1000).toFixed(2)));
+  return String(progress);
+}
