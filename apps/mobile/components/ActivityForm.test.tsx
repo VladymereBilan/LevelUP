@@ -202,3 +202,48 @@ describe("ActivityForm schedule", () => {
     expect(screen.queryByTestId(`schedule-day-${SATURDAY}`)).toBeNull();
   });
 });
+
+describe("ActivityForm category", () => {
+  async function startNewCategory(name: string) {
+    await fireEvent.press(screen.getByText("New category"));
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Strength"), name);
+  }
+
+  it("refuses a second category with a name already in use", async () => {
+    const onSubmit = await renderForm();
+    await startNewCategory("Training");
+    await submit();
+
+    // The reported bug: two chips both reading "Gym", because the inline create path
+    // inserted unconditionally and categories has no unique constraint on (user_id, name).
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText(/already have a category called "Training"/)).toBeTruthy();
+  });
+
+  it("matches regardless of case and surrounding spaces", async () => {
+    await renderForm();
+    await startNewCategory("  tRaInInG  ");
+
+    expect(screen.getByText(/already have a category called "Training"/)).toBeTruthy();
+  });
+
+  it("still allows a genuinely new name", async () => {
+    const onSubmit = await renderForm();
+    await startNewCategory("Mobility");
+    await submit();
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0]![0].category).toMatchObject({ kind: "new" });
+  });
+
+  it("does not block picking the existing category", async () => {
+    const onSubmit = await renderForm();
+    await submit();
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0]![0].category).toEqual({
+      kind: "existing",
+      categoryId: CATEGORY.id,
+    });
+  });
+});

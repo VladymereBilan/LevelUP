@@ -235,6 +235,17 @@ export function ActivityForm({
 
   const nameError = name.trim().length === 0 ? "Activity name is required." : null;
 
+  // Nothing downstream prevents two categories sharing a name: `categories` has no unique
+  // constraint on (user_id, name), and the inline create path inserts unconditionally. So a
+  // player who typed the same name on two different activities ended up with two identical
+  // chips and no way to tell them apart or merge them.
+  const duplicateCategory =
+    categoryMode === "new"
+      ? categories.find(
+          (category) => category.name.trim().toLowerCase() === newCategoryName.trim().toLowerCase(),
+        )
+      : undefined;
+
   const categoryError =
     categoryMode === "existing"
       ? selectedCategoryId === null
@@ -242,7 +253,9 @@ export function ActivityForm({
         : null
       : newCategoryName.trim().length === 0
         ? "Category name is required."
-        : null;
+        : duplicateCategory
+          ? `You already have a category called "${duplicateCategory.name}". Pick it under Existing instead.`
+          : null;
 
   const targetValid = isSafeActivityTarget(target);
   const targetError = targetValid
