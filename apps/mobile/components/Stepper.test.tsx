@@ -108,3 +108,42 @@ describe("Stepper", () => {
     expect(screen.getByTestId("km").props.keyboardType).toBe("decimal-pad");
   });
 });
+
+describe("Stepper width", () => {
+  /** A settings card on a ~390pt phone: screen padding 20 each side, card padding 16 each. */
+  const CARD_INNER_WIDTH = 318;
+  const BUTTON = 36;
+  const GAP = 12;
+
+  function intrinsicWidth(inputMinWidth: number): number {
+    return BUTTON + GAP + inputMinWidth + GAP + BUTTON;
+  }
+
+  it("fits inside a settings card on its own", async () => {
+    await render(<Stepper testID="w" value={9} min={0} max={23} onChange={jest.fn()} />);
+    const inputMinWidth = Number(screen.getByTestId("w").props.style.minWidth);
+
+    expect(intrinsicWidth(inputMinWidth)).toBeLessThan(CARD_INNER_WIDTH);
+  });
+
+  it("can shrink rather than overflow a parent too narrow for it", async () => {
+    // The reported bug: the reminder-time row put two of these side by side. That fitted
+    // while the value was a bare text label and clipped the minute control off-screen once
+    // it became a field wide enough to type into. The row is stacked now; this keeps the
+    // control itself from being the thing that overflows next time.
+    await render(<Stepper testID="w" value={9} min={0} max={23} onChange={jest.fn()} />);
+
+    expect(screen.getByTestId("w").props.style.flexShrink).toBe(1);
+  });
+
+  it("does not fit two in a card row on a narrow phone", async () => {
+    // A 360pt device, which plenty of Android phones are: 360 less 20pt screen padding and
+    // 16pt card padding on each side. Two side by side overflow it even without their unit
+    // suffixes, which is why the reminder time is stacked rather than laid out in one row.
+    const NARROW_CARD_INNER_WIDTH = 288;
+    await render(<Stepper testID="w" value={9} min={0} max={23} onChange={jest.fn()} />);
+    const inputMinWidth = Number(screen.getByTestId("w").props.style.minWidth);
+
+    expect(intrinsicWidth(inputMinWidth) * 2).toBeGreaterThan(NARROW_CARD_INNER_WIDTH);
+  });
+});

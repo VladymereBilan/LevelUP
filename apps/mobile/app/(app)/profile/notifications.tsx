@@ -80,24 +80,37 @@ export default function NotificationsScreen() {
                 <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
                   Reminder time
                 </Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Stepper
-                    value={prefs.dailyReminderHour}
-                    min={0}
-                    max={23}
-                    suffix="h"
-                    onChange={(hour) => void updatePrefs({ ...prefs, dailyReminderHour: hour })}
-                  />
-                  <Stepper
-                    value={prefs.dailyReminderMinute}
-                    min={0}
-                    max={45}
-                    step={15}
-                    suffix="m"
-                    onChange={(minute) =>
-                      void updatePrefs({ ...prefs, dailyReminderMinute: minute })
-                    }
-                  />
+                {/* Stacked, not side by side: two steppers in one row fitted only while the
+                    value was a bare label. Once it became a field wide enough to type into,
+                    the pair overflowed the card and clipped the minute control off-screen. */}
+                <View style={{ gap: 10 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Text style={{ color: colors.muted, fontSize: fontSizes.label, width: 52 }}>
+                      Hour
+                    </Text>
+                    <Stepper
+                      testID="reminder-hour"
+                      value={prefs.dailyReminderHour}
+                      min={0}
+                      max={23}
+                      onChange={(hour) => void updatePrefs({ ...prefs, dailyReminderHour: hour })}
+                    />
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Text style={{ color: colors.muted, fontSize: fontSizes.label, width: 52 }}>
+                      Minute
+                    </Text>
+                    <Stepper
+                      testID="reminder-minute"
+                      value={prefs.dailyReminderMinute}
+                      min={0}
+                      max={45}
+                      step={15}
+                      onChange={(minute) =>
+                        void updatePrefs({ ...prefs, dailyReminderMinute: minute })
+                      }
+                    />
+                  </View>
                 </View>
               </View>
             ) : null}

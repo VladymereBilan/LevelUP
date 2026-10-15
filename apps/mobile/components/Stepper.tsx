@@ -77,7 +77,7 @@ export function Stepper({ value, onChange, min, max, step = 1, suffix, testID }:
   }
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flexShrink: 1 }}>
       <Pressable
         testID={testID ? `${testID}-minus` : undefined}
         onPress={() => nudge(-step)}
@@ -107,7 +107,8 @@ export function Stepper({ value, onChange, min, max, step = 1, suffix, testID }:
           keyboardType={allowDecimal ? "decimal-pad" : "number-pad"}
           returnKeyType="done"
           style={{
-            minWidth: 72,
+            minWidth: 56,
+            flexShrink: 1,
             minHeight: 44,
             paddingHorizontal: 10,
             borderWidth: 1,
