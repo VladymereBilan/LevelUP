@@ -363,10 +363,18 @@ Known gaps, mobile:
   load and never kept in sync with it afterward. Currently harmless — nothing reads the stale
   `item.progress` value again after that first read — but worth fixing properly (or removing
   the now-pointless field) if this screen is touched again.
-- Categories can be created (inline, while adding an activity) but not edited or deleted from
-  the app yet — only activities have an edit/archive screen. A category with activities still
-  pointing at it can't be deleted anyway (FK is `on delete cascade`, which would silently take
-  the activities with it), so category deletion needs its own UX decision, not just a button.
+- Categories can be created and **edited** (`app/(app)/(home)/quests/categories/[id].tsx`,
+  reached from the Categories row on Manage Activities) but still not deleted. Editing covers
+  name, colour, icon and stat; changing the stat only moves where future completions are
+  credited, which the screen says, because nothing reassigns the `stats` row or the
+  `xp_events` ledger. Deletion remains out: the FK is `on delete cascade`, so removing a
+  category would silently take its activities and their quest history, and that needs a
+  decision (move the activities? refuse while non-empty?) rather than a button.
+- **Nothing in the schema stops two categories sharing a name.** There is no unique index on
+  `(user_id, lower(name))`, and both the create form and the edit screen guard against it in
+  the client only (`conflictingCategoryName`). A unique index is the real fix and is blocked
+  on a merge tool: production already holds duplicate rows, so the index cannot be created
+  until they are reconciled.
 - `apps/mobile` runs on **Jest (`jest-expo`), not Vitest** — see `jest.config.js` and
   `test/setup.ts`. It moved off Vitest when component rendering was added: React Native ships
   Flow-typed source that esbuild cannot parse, and `@testing-library/react-native` is CJS, so

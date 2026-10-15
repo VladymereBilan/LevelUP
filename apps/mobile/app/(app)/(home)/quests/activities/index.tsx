@@ -184,6 +184,39 @@ export default function ManageActivitiesScreen() {
         <ScrollView
           contentContainerStyle={{ padding: 20, paddingTop: 0, paddingBottom: 40, flexGrow: 1 }}
         >
+          {/* Categories are edited from here rather than from a tab of their own: this is
+              already the screen someone opens to tidy up what they are tracking. */}
+          {categories.length > 0 ? (
+            <View style={{ gap: 10, marginBottom: 22 }}>
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontSize: fontSizes.label,
+                  fontWeight: "700",
+                  letterSpacing: 1.4,
+                }}
+              >
+                CATEGORIES
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {categories.map((category) => (
+                  <Chip
+                    key={category.id}
+                    testID={`edit-category-${category.id}`}
+                    label={category.name}
+                    icon={getCategoryIcon(category.icon)}
+                    tint={category.color}
+                    selected={false}
+                    onPress={() => router.push(`/quests/categories/${category.id}`)}
+                  />
+                ))}
+              </View>
+              <Text style={{ color: colors.muted, fontSize: fontSizes.label }}>
+                Tap one to rename it or change its colour, icon or stat.
+              </Text>
+            </View>
+          ) : null}
+
           {error ? (
             <Text
               style={{ color: colors.danger, fontSize: fontSizes.caption, textAlign: "center" }}

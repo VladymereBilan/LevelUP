@@ -9,7 +9,6 @@ import {
   MAX_SETS_TARGET,
   MAX_STEPS_TARGET,
   MAX_WEIGHT_KG,
-  STATS,
   getLocalDateString,
   type ActivityTarget,
   type Difficulty,
@@ -17,7 +16,8 @@ import {
   type Schedule,
   type Stat,
 } from "@levelup/engine";
-import { Chip, Swatch } from "./Chip";
+import { Chip } from "./Chip";
+import { CategoryFields } from "./CategoryFields";
 import type { IconName } from "./Icon";
 import { Stepper } from "./Stepper";
 import { Button } from "./Button";
@@ -36,7 +36,7 @@ import {
   schedulePresetError,
   type SchedulePreset,
 } from "../lib/schedulePresets";
-import { colors, fontSizes, fonts, statLabels } from "../theme/tokens";
+import { colors, fontSizes, fonts } from "../theme/tokens";
 
 const METRIC_OPTIONS: { value: MetricType; label: string }[] = [
   { value: "checkbox", label: "Checkbox" },
@@ -357,56 +357,20 @@ export function ActivityForm({
             ))}
           </View>
         ) : (
-          <View style={{ gap: 14 }}>
-            <TextInput
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
-              placeholder="e.g. Strength"
-              placeholderTextColor={colors.disabled}
-              maxLength={40}
-              style={{
-                minHeight: 48,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: "rgba(18,18,31,0.75)",
-                color: colors.text,
-                paddingHorizontal: 14,
-                fontSize: 14,
-              }}
-            />
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {CATEGORY_ICON_OPTIONS.map((icon) => (
-                <Chip
-                  key={icon}
-                  label={icon}
-                  icon={icon}
-                  selected={newCategoryIcon === icon}
-                  onPress={() => setNewCategoryIcon(icon)}
-                />
-              ))}
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {CATEGORY_COLOR_OPTIONS.map((color) => (
-                <Swatch
-                  key={color}
-                  color={color}
-                  selected={newCategoryColor === color}
-                  onPress={() => setNewCategoryColor(color)}
-                />
-              ))}
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {STATS.map((stat) => (
-                <Chip
-                  key={stat}
-                  label={statLabels[stat]}
-                  selected={newCategoryStat === stat}
-                  onPress={() => setNewCategoryStat(stat)}
-                />
-              ))}
-            </View>
-          </View>
+          <CategoryFields
+            values={{
+              name: newCategoryName,
+              icon: newCategoryIcon,
+              color: newCategoryColor,
+              stat: newCategoryStat,
+            }}
+            onChange={(next) => {
+              setNewCategoryName(next.name);
+              setNewCategoryIcon(next.icon);
+              setNewCategoryColor(next.color);
+              setNewCategoryStat(next.stat);
+            }}
+          />
         )}
         {fieldError(categoryError)}
       </View>
